@@ -25,7 +25,9 @@ jobs:
           node-version: 20
 
       - name: Install Project Dependencies
-        run: npm install
+        run: |
+          npm install --legacy-peer-deps
+          npm list expo || npm install expo@~51.0.0
 
       - name: Prebuild Native Android Directory
         run: npx expo prebuild --platform android --clean
