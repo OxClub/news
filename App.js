@@ -22,35 +22,74 @@ import { getHeadlines } from './src/api/newsApi';
 
 const { width } = Dimensions.get('window');
 
+const STRINGS = {
+  en: {
+    title: 'THE OX NEWS',
+    mustRead: 'MUST READ',
+    ticker: 'Asian Games Medal Tally: India hits record medals in key athletics & kabaddi.',
+    sectionsTitle: 'SECTIONS',
+    shortcuts: 'YOUR SHORTCUTS',
+    bookmarks: 'Bookmarks',
+    epaper: 'ePaper',
+    talkToUs: 'Talk to us',
+    changeCity: 'No, Change City',
+    isThisCity: 'Is this your city?',
+    subscribe: 'SUBSCRIBE',
+    marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
+    close: 'Close',
+    submit: 'Submit',
+    tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
+    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Technology', Science: 'Science' },
+  },
+  hi: {
+    title: 'द ऑक्स न्यूज़',
+    mustRead: 'ज़रूर पढ़ें',
+    ticker: 'एशियाई खेल पदक तालिका: भारत ने कबड्डी और एथलेटिक्स में ऐतिहासिक पदक जीते।',
+    sectionsTitle: 'प्रमुख श्रेणियां',
+    shortcuts: 'शॉर्टकट',
+    bookmarks: 'सहेजे गए समाचार',
+    epaper: 'ई-पेपर',
+    talkToUs: 'हमसे संपर्क करें',
+    changeCity: 'शहर बदलें',
+    isThisCity: 'क्या यह आपका शहर है?',
+    subscribe: 'सब्सक्राइब',
+    marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
+    close: 'बंद करें',
+    submit: 'जमा करें',
+    tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'खास खबरें' },
+    cats: { India: 'भारत', World: 'विदेश', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
+  },
+};
+
+const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Technology', 'Science'];
 const CITIES = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad'];
 
-const SECTIONS = [
-  { id: 'India', icon: 'flag-outline' },
-  { id: 'World', icon: 'earth-outline' },
-  { id: 'Sports', icon: 'football-outline' },
-  { id: 'Entertainment', icon: 'film-outline' },
-  { id: 'Business', icon: 'cash-outline' },
-  { id: 'Technology', icon: 'hardware-chip-outline' },
-  { id: 'Science', icon: 'flask-outline' },
-];
-
 export default function App() {
+  const [lang, setLang] = useState('en');
+  const t = STRINGS[lang];
+
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
   const [selectedCity, setSelectedCity] = useState('Delhi');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Modals & Drawers
+
+  // Modals
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreModalOpen, setMoreModalOpen] = useState(false);
   const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [gameModalOpen, setGameModalOpen] = useState(false);
+  const [aiqModalOpen, setAiqModalOpen] = useState(false);
+  const [awardsModalOpen, setAwardsModalOpen] = useState(false);
   const [featureModal, setFeatureModal] = useState({ visible: false, title: '', content: '' });
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  // Article state tracking
+  // Quiz State for Games
+  const [quizScore, setQuizScore] = useState(0);
+  const [quizStep, setQuizStep] = useState(0);
+  const [quizAnswered, setQuizAnswered] = useState(false);
+
+  // Bookmarks & Dismissals
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
@@ -58,34 +97,37 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'sensex nifty stock market';
+      if (activeTab === 'markets') query = 'Investing';
       else if (activeTab === 'delhi') query = selectedCity;
-      else if (activeTab === 'exclusives') query = 'investigative analysis';
-      else if (activeTab === 'explore') query = 'trends innovation';
+      else if (activeTab === 'exclusives') query = 'India';
+      else if (activeTab === 'explore') query = activeCategory;
 
-      const data = await getHeadlines(query);
-      setArticles(data || []);
+      const data = await getHeadlines(query, lang);
+      setArticles(data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, activeCategory, selectedCity]);
+  }, [activeTab, activeCategory, selectedCity, lang]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadFeed();
+  const toggleLanguage = () => {
+    const nextLang = lang === 'en' ? 'hi' : 'en';
+    setLang(nextLang);
   };
 
   const toggleBookmark = (id, title) => {
     const isNow = !bookmarkedIds[id];
     setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
-    Alert.alert(isNow ? 'Saved to Bookmarks' : 'Removed from Bookmarks', `"${title.slice(0, 45)}..."`);
+    Alert.alert(
+      lang === 'hi' ? (isNow ? 'सहेज लिया गया' : 'हटा दिया गया') : (isNow ? 'Bookmarked' : 'Removed'),
+      title.slice(0, 45) + '...'
+    );
   };
 
   const dismissArticle = (id) => {
@@ -98,23 +140,44 @@ export default function App() {
     }
   };
 
-  const openFeatureModal = (title, content) => {
+  const openInfoModal = (title, content) => {
     setMoreModalOpen(false);
     setDrawerOpen(false);
     setFeatureModal({ visible: true, title, content });
   };
 
-  const handleSearchSubmit = async () => {
-    if (!searchQuery.trim()) return;
-    setSearchModalOpen(false);
-    setLoading(true);
-    try {
-      const data = await getHeadlines(searchQuery);
-      setArticles(data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+  // Interactive Quiz Data
+  const QUIZ_QUESTIONS = [
+    {
+      q: lang === 'hi' ? 'भारत की राजधानी क्या है?' : 'What is the capital of India?',
+      options: lang === 'hi' ? ['मुंबई', 'नई दिल्ली', 'कोलकाता', 'चेन्नई'] : ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
+      correct: 1,
+    },
+    {
+      q: lang === 'hi' ? 'कंप्यूटर में AI का पूर्ण रूप क्या है?' : 'What does AI stand for in tech?',
+      options: lang === 'hi' ? ['आर्टिफिशियल इंटेलिजेंस', 'ऑटोमेटेड इंटरनेट', 'एप्पल इनसाइट', 'एक्टिव इंटरफेस'] : ['Artificial Intelligence', 'Automated Internet', 'Apple Insight', 'Active Interface'],
+      correct: 0,
+    },
+  ];
+
+  const handleQuizAnswer = (idx) => {
+    if (quizAnswered) return;
+    setQuizAnswered(true);
+    if (idx === QUIZ_QUESTIONS[quizStep].correct) {
+      setQuizScore(s => s + 1);
+    }
+  };
+
+  const nextQuiz = () => {
+    if (quizStep + 1 < QUIZ_QUESTIONS.length) {
+      setQuizStep(s => s + 1);
+      setQuizAnswered(false);
+    } else {
+      Alert.alert(lang === 'hi' ? 'क्विज़ पूरा हुआ!' : 'Quiz Completed!', `${lang === 'hi' ? 'आपका स्कोर:' : 'Your Score:'} ${quizScore + 1}/${QUIZ_QUESTIONS.length}`);
+      setGameModalOpen(false);
+      setQuizStep(0);
+      setQuizScore(0);
+      setQuizAnswered(false);
     }
   };
 
@@ -124,31 +187,43 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F5" />
 
-      {/* TOP HEADER */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconBtn}>
           <Ionicons name="menu" size={28} color="#1E293B" />
         </TouchableOpacity>
+
         <TouchableOpacity onPress={() => setActiveTab('newsfeed')} style={styles.headerCenter}>
-          <Text style={styles.mastheadTitle}>THE OX NEWS</Text>
+          <Text style={styles.mastheadTitle}>{t.title}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => openFeatureModal('Notifications', 'You are caught up with all live breaking updates.')}
-        >
-          <Ionicons name="notifications-outline" size={24} color="#1E293B" />
-        </TouchableOpacity>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {/* Language Switch Button */}
+          <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
+            <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => openInfoModal(lang === 'hi' ? 'सूचनाएं' : 'Notifications', lang === 'hi' ? 'आप सभी ताज़ा खबरों से अपडेट हैं।' : 'You have no new unread alerts.')}
+          >
+            <Ionicons name="notifications-outline" size={24} color="#1E293B" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* BODY CONTENT */}
+      {/* MAIN BODY */}
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            {/* Quick Service Action Buttons */}
+            {/* Top Shortcut Pill Actions */}
             <View style={styles.quickServicesBar}>
               <TouchableOpacity
                 style={styles.quickServiceItem}
-                onPress={() => openFeatureModal('OX+ Premium', 'Unlock ad-free investigative reports, global editorials, and private newsletters.')}
+                onPress={() => {
+                  setActiveTab('exclusives');
+                  loadFeed();
+                }}
               >
                 <View style={styles.quickIconCircle}>
                   <MaterialCommunityIcons name="plus-box-outline" size={20} color="#9A3412" />
@@ -158,17 +233,17 @@ export default function App() {
 
               <TouchableOpacity
                 style={styles.quickServiceItem}
-                onPress={() => openFeatureModal('OX Games & Puzzles', 'Daily Crossword #481\nMini Sudoku\nWord Scramble\n\nDaily leaderboard resets in 4 hours.')}
+                onPress={() => setGameModalOpen(true)}
               >
                 <View style={styles.quickIconCircle}>
                   <MaterialCommunityIcons name="puzzle-outline" size={20} color="#9A3412" />
                 </View>
-                <Text style={styles.quickServiceText}>Games</Text>
+                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'खेल' : 'Games'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.quickServiceItem}
-                onPress={() => openFeatureModal('AIQ Knowledge Test', 'Test your Tech & AI IQ:\nQ1: What does LLM stand for?\nScore: 8/10 (Top 15% of readers this week).')}
+                onPress={() => setAiqModalOpen(true)}
               >
                 <View style={styles.quickIconCircle}>
                   <Text style={styles.aiqIconText}>AIQ</Text>
@@ -178,48 +253,48 @@ export default function App() {
 
               <TouchableOpacity
                 style={styles.quickServiceItem}
-                onPress={() => openFeatureModal('Home & Decor Awards 2026', 'Voting open for the 2026 Urban Architecture and Eco Living nominations.')}
+                onPress={() => setAwardsModalOpen(true)}
               >
                 <View style={styles.quickIconCircle}>
-                  <Ionicons name="people-outline" size={20} color="#9A3412" />
+                  <Ionicons name="trophy-outline" size={20} color="#9A3412" />
                 </View>
-                <Text style={styles.quickServiceText}>Awards</Text>
+                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'अवार्ड्स' : 'Awards'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.quickServiceItem} onPress={() => setMoreModalOpen(true)}>
                 <View style={styles.quickIconCircle}>
                   <Ionicons name="apps-outline" size={20} color="#9A3412" />
                 </View>
-                <Text style={styles.quickServiceText}>More</Text>
+                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'अधिक' : 'More'}</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Must Read Ticker Button */}
+            {/* Must Read Breaking Ribbon */}
             <TouchableOpacity
               style={styles.tickerCard}
-              onPress={() => openFeatureModal('Must Read Analysis', 'Asian Games Medal Tally: India crosses double digits with historic kabaddi & badminton sweeps.')}
+              onPress={() => openInfoModal(t.mustRead, t.ticker)}
             >
               <View style={styles.tickerBadge}>
-                <Text style={styles.tickerBadgeText}>Must Read</Text>
+                <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
               </View>
               <Text style={styles.tickerTitle} numberOfLines={2}>
-                Asian Games Medal Tally: How two kabaddi golds helped India break back into top 10
+                {t.ticker}
               </Text>
             </TouchableOpacity>
 
-            {/* Category Scroll Strip */}
+            {/* Horizontal Categories */}
             <View style={styles.categoryScrollWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
                 {SECTIONS.map((sec) => {
-                  const isCurrent = activeCategory === sec.id;
+                  const isCurrent = activeCategory === sec;
                   return (
                     <TouchableOpacity
-                      key={sec.id}
+                      key={sec}
                       style={[styles.categoryTab, isCurrent && styles.categoryTabActive]}
-                      onPress={() => setActiveCategory(sec.id)}
+                      onPress={() => setActiveCategory(sec)}
                     >
                       <Text style={[styles.categoryTabText, isCurrent && styles.categoryTabTextActive]}>
-                        {sec.id}
+                        {t.cats[sec] || sec}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -229,68 +304,74 @@ export default function App() {
           </>
         )}
 
-        {/* Markets Screen Layout */}
+        {/* Markets Header */}
         {activeTab === 'markets' && (
           <View style={styles.subScreenHeader}>
             <View style={styles.marketPromoBanner}>
-              <Text style={styles.marketPromoText}>Month End Offer: Flat 45% Off!</Text>
+              <Text style={styles.marketPromoText}>{t.marketPromo}</Text>
               <TouchableOpacity
                 style={styles.subscribeBtn}
-                onPress={() => openFeatureModal('Subscribe to Markets Pro', 'Get real-time algorithmic trades, screener alerts, and portfolio tracking for ₹2,599/yr.')}
+                onPress={() => openInfoModal(t.subscribe, lang === 'hi' ? 'ऑक्स मार्केट प्रो सदस्यता शुरू हो गई है।' : 'Subscribed to OX Markets Pro!')}
               >
-                <Text style={styles.subscribeBtnText}>SUBSCRIBE</Text>
+                <Text style={styles.subscribeBtnText}>{t.subscribe}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.marketToolsGrid}>
               {[
-                { title: 'Stocks', icon: 'chart-line' },
-                { title: 'News', icon: 'newspaper' },
-                { title: 'Recos', icon: 'thumbs-up' },
-                { title: 'Screener', icon: 'filter' },
-                { title: 'Masterclass', icon: 'graduation-cap' },
+                { title: 'Stocks', label: lang === 'hi' ? 'शेयर' : 'Stocks', query: 'Nifty Sensex Stocks' },
+                { title: 'Gold', label: lang === 'hi' ? 'सोना' : 'Gold', query: 'Gold Silver Commodity' },
+                { title: 'Banking', label: lang === 'hi' ? 'बैंक' : 'Banking', query: 'Banking RBI' },
+                { title: 'Crypto', label: lang === 'hi' ? 'क्रिप्टो' : 'Crypto', query: 'Bitcoin Crypto' },
               ].map((tool, i) => (
                 <TouchableOpacity
                   key={i}
                   style={styles.marketToolItem}
-                  onPress={() => openFeatureModal(tool.title, `Loading real-time ${tool.title} insights and analytics feed...`)}
+                  onPress={async () => {
+                    setLoading(true);
+                    const res = await getHeadlines(tool.query, lang);
+                    setArticles(res);
+                    setLoading(false);
+                  }}
                 >
                   <View style={styles.marketIconBg}>
-                    <FontAwesome5 name={tool.icon} size={16} color="#0F172A" />
+                    <FontAwesome5 name="chart-line" size={16} color="#DC2626" />
                   </View>
-                  <Text style={styles.marketToolLabel}>{tool.title}</Text>
+                  <Text style={styles.marketToolLabel}>{tool.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         )}
 
-        {/* Delhi / City Screen Layout */}
+        {/* City Header */}
         {activeTab === 'delhi' && (
           <View style={styles.citySelectorBanner}>
-            <Text style={styles.citySelectorText}>Is this your city? <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
+            <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
             <TouchableOpacity style={styles.changeCityBtn} onPress={() => setCityModalOpen(true)}>
-              <Text style={styles.changeCityBtnText}>No, Change City</Text>
+              <Text style={styles.changeCityBtnText}>{t.changeCity}</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Explore Screen Layout */}
+        {/* Explore Categories Strip (Loads real news on click) */}
         {activeTab === 'explore' && (
           <View style={styles.exploreFilterRow}>
-            {['All', 'Free', 'Parenting', 'News', 'Investing'].map((cat, i) => (
+            {['All', 'Parenting', 'Investing', 'Technology', 'Science'].map((item) => (
               <TouchableOpacity
-                key={cat}
-                style={[styles.explorePill, i === 0 && styles.explorePillActive]}
-                onPress={() => openFeatureModal(cat, `Browsing trending curation for "${cat}".`)}
+                key={item}
+                style={[styles.explorePill, activeCategory === item && styles.explorePillActive]}
+                onPress={() => setActiveCategory(item === 'All' ? 'India' : item)}
               >
-                <Text style={[styles.explorePillText, i === 0 && styles.explorePillTextActive]}>{cat}</Text>
+                <Text style={[styles.explorePillText, activeCategory === item && styles.explorePillTextActive]}>
+                  {item}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
         )}
 
-        {/* STORIES FLATLIST */}
+        {/* FEED LIST */}
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#DC2626" />
@@ -300,7 +381,7 @@ export default function App() {
             data={visibleArticles}
             keyExtractor={(item, index) => item.id?.toString() || index.toString()}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#DC2626']} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadFeed} colors={['#DC2626']} />}
             renderItem={({ item, index }) => {
               const isLargeLead = index === 0;
               const isBookmarked = !!bookmarkedIds[item.id];
@@ -311,7 +392,7 @@ export default function App() {
                     <View style={styles.metaRow}>
                       <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
                       <View style={styles.actionIconRow}>
-                        <TouchableOpacity style={{ marginRight: 12 }} onPress={() => toggleBookmark(item.id, item.title)}>
+                        <TouchableOpacity style={{ marginRight: 14 }} onPress={() => toggleBookmark(item.id, item.title)}>
                           <Ionicons
                             name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
                             size={18}
@@ -376,12 +457,12 @@ export default function App() {
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('newsfeed')}>
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'newsfeed' && styles.tabLabelActive]}>Newsfeed</Text>
+          <Text style={[styles.tabLabel, activeTab === 'newsfeed' && styles.tabLabelActive]}>{t.tabs.feed}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('markets')}>
           <Ionicons name="trending-up-outline" size={21} color={activeTab === 'markets' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'markets' && styles.tabLabelActive]}>Markets</Text>
+          <Text style={[styles.tabLabel, activeTab === 'markets' && styles.tabLabelActive]}>{t.tabs.markets}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('delhi')}>
@@ -391,21 +472,91 @@ export default function App() {
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('explore')}>
           <Ionicons name="compass-outline" size={21} color={activeTab === 'explore' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>Explore</Text>
+          <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>{t.tabs.explore}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('exclusives')}>
           <MaterialCommunityIcons name="crown-outline" size={22} color={activeTab === 'exclusives' ? '#EAB308' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>Exclusives</Text>
+          <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>{t.tabs.exclusives}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* MORE ON OX BOTTOM SHEET */}
+      {/* GAMES INTERACTIVE QUIZ MODAL */}
+      <Modal visible={gameModalOpen} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureTitle}>🎯 {lang === 'hi' ? 'दैनिक क्विज़' : 'Daily Brain Quiz'}</Text>
+            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 12 }}>
+              {lang === 'hi' ? `प्रश्न ${quizStep + 1} / ${QUIZ_QUESTIONS.length}` : `Question ${quizStep + 1} of ${QUIZ_QUESTIONS.length}`}
+            </Text>
+            <Text style={styles.featureContent}>{QUIZ_QUESTIONS[quizStep].q}</Text>
+
+            {QUIZ_QUESTIONS[quizStep].options.map((opt, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.quizOptionBtn,
+                  quizAnswered && i === QUIZ_QUESTIONS[quizStep].correct && styles.quizOptionCorrect,
+                ]}
+                onPress={() => handleQuizAnswer(i)}
+              >
+                <Text style={styles.quizOptionText}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {quizAnswered && (
+              <TouchableOpacity style={styles.featureCloseBtn} onPress={nextQuiz}>
+                <Text style={styles.featureCloseBtnText}>{lang === 'hi' ? 'अगला प्रश्न →' : 'Next Question →'}</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={{ alignSelf: 'center', marginTop: 14 }} onPress={() => setGameModalOpen(false)}>
+              <Text style={{ color: '#94A3B8' }}>{t.close}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* AIQ TEST MODAL */}
+      <Modal visible={aiqModalOpen} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureTitle}>🧠 AIQ Tech Readiness Test</Text>
+            <Text style={styles.featureContent}>
+              {lang === 'hi'
+                ? 'आपका AI और टेक स्कोर: 85% (अग्रणी पाठक)\n\nआज के मुख्य रुझान:\n1. Generative AI और रोबोटिक्स\n2. भारत में सेमीकंडक्टर निर्माण'
+                : 'Your AI & Innovation Index: 85/100 (Advanced)\n\nKey Insights:\n1. GenAI Enterprise Adoption\n2. India Semiconductor Mission updates'}
+            </Text>
+            <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setAiqModalOpen(false)}>
+              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* AWARDS 2026 MODAL */}
+      <Modal visible={awardsModalOpen} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureTitle}>🏆 OX Awards 2026</Text>
+            <Text style={styles.featureContent}>
+              {lang === 'hi'
+                ? 'वर्ष 2026 के शीर्ष नामांकित व्यक्ति:\n• बेस्ट एआई स्टार्टअप: नेक्सस लैब्स\n• उत्कृष्ट पत्रकारिता: डिजिटल भारत रिपोर्ट\n• यंग इनोवेटर ऑफ द ईयर: टेक सॉल्यूशंस'
+                : 'Top Nominees of 2026:\n• Best AI Venture: Nexus Labs\n• Investigative Journalism: Digital Bharat Report\n• Young Innovator of the Year: Tech Solutions'}
+            </Text>
+            <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setAwardsModalOpen(false)}>
+              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MORE SERVICES MODAL */}
       <Modal visible={moreModalOpen} transparent animationType="slide">
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setMoreModalOpen(false)}>
           <View style={styles.bottomSheetCard}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>More on OX News</Text>
+              <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अन्य सेवाएं' : 'More Services'}</Text>
               <TouchableOpacity onPress={() => setMoreModalOpen(false)}>
                 <Ionicons name="close" size={22} color="#475569" />
               </TouchableOpacity>
@@ -413,19 +564,15 @@ export default function App() {
 
             <View style={styles.sheetGrid}>
               {[
-                { title: 'OX+', icon: 'plus-box-outline', desc: 'Subscriber benefits & premium stories' },
-                { title: 'Games', icon: 'puzzle-outline', desc: 'Daily word & math games' },
-                { title: 'AIQ Test', icon: 'brain', desc: 'AI readiness quiz' },
-                { title: 'Awards 2026', icon: 'trophy-outline', desc: 'Tech & design awards' },
-                { title: 'Astrology', icon: 'compass-outline', desc: 'Horoscopes & birth charts' },
-                { title: 'Retirement', icon: 'chart-pie', desc: 'Financial planning calculators' },
-                { title: 'Videos', icon: 'play-box-outline', desc: 'Curated 60-second video stories' },
-                { title: 'Credit Score', icon: 'speedometer', desc: 'Free credit health monitor' },
+                { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', info: lang === 'hi' ? 'आज का दिन सभी राशियों के लिए लाभकारी और उन्नति वाला रहेगा।' : 'Today is favourable for career growth and major investment decisions.' },
+                { title: lang === 'hi' ? 'वीडियो' : 'Videos', icon: 'play-box-outline', info: lang === 'hi' ? '60-सेकंड की देश-विदेश की ताज़ा वीडियो बुलेटिन लोड हो रही हैं।' : 'Streaming 60-second top trending news video reels.' },
+                { title: lang === 'hi' ? 'योग क्लास' : 'Yoga', icon: 'human', info: lang === 'hi' ? 'दैनिक प्राणायाम और तनाव मुक्ति सत्र सुबह 6:00 बजे लाइव होगा।' : 'Daily mindfulness and pranayama session streams at 6:00 AM.' },
+                { title: lang === 'hi' ? 'क्रेडिट स्कोर' : 'Credit Score', icon: 'speedometer', info: lang === 'hi' ? 'आपका सिबिल स्कोर 780 है (उत्कृष्ट)।' : 'Your estimated credit score is 780 (Excellent).' },
               ].map((item, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={styles.sheetGridItem}
-                  onPress={() => openFeatureModal(item.title, item.desc)}
+                  onPress={() => openInfoModal(item.title, item.info)}
                 >
                   <View style={styles.quickIconCircle}>
                     <MaterialCommunityIcons name={item.icon} size={22} color="#9A3412" />
@@ -443,84 +590,59 @@ export default function App() {
         <View style={styles.drawerBackdrop}>
           <View style={styles.drawerContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Profile Box */}
               <View style={styles.drawerProfileBox}>
                 <View style={styles.profileAvatar}>
                   <Ionicons name="person" size={26} color="#FFF" />
                 </View>
-                <Text style={styles.drawerProfileText}>Sign in to save your reading history</Text>
+                <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'अपनी पसंदीदा खबरें सहेजने के लिए साइन इन करें' : 'Sign in to sync your bookmarks'}</Text>
                 <TouchableOpacity
                   style={styles.signInBtn}
-                  onPress={() => openFeatureModal('Sign In', 'Enter your email or Google Account to sync bookmarks and subscriptions across devices.')}
+                  onPress={() => openInfoModal('Sign In', lang === 'hi' ? 'गूगल या ईमेल से लॉगिन सफल रहा।' : 'Account successfully synced.')}
                 >
-                  <Text style={styles.signInBtnText}>Sign In  →</Text>
+                  <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In  →'}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.drawerSectionHeading}>Sections</Text>
+              <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
               {SECTIONS.map((sec) => (
                 <TouchableOpacity
-                  key={sec.id}
+                  key={sec}
                   style={styles.drawerRow}
                   onPress={() => {
-                    setActiveCategory(sec.id);
+                    setActiveCategory(sec);
                     setDrawerOpen(false);
                   }}
                 >
-                  <Ionicons name={sec.icon} size={20} color="#334155" style={{ width: 30 }} />
-                  <Text style={styles.drawerRowText}>{sec.id}</Text>
+                  <Ionicons name="chevron-forward-outline" size={16} color="#64748B" style={{ width: 24 }} />
+                  <Text style={styles.drawerRowText}>{t.cats[sec] || sec}</Text>
                 </TouchableOpacity>
               ))}
 
               <View style={styles.drawerDivider} />
-              <Text style={styles.drawerSectionHeading}>Your Shortcuts</Text>
+              <Text style={styles.drawerSectionHeading}>{t.shortcuts}</Text>
               <TouchableOpacity
                 style={styles.drawerRow}
-                onPress={() => openFeatureModal('OX ePaper', 'Digital replica edition of today\'s daily newspaper.')}
+                onPress={() => openInfoModal(t.epaper, lang === 'hi' ? 'आज का ई-पेपर संस्करण उपलब्ध है।' : 'Today\'s digital paper edition is ready to read.')}
               >
-                <Ionicons name="newspaper-outline" size={20} color="#334155" style={{ width: 30 }} />
-                <Text style={styles.drawerRowText}>ePaper</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.drawerRow}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  Alert.alert('Saved Bookmarks', `You have ${Object.values(bookmarkedIds).filter(Boolean).length} article(s) saved.`);
-                }}
-              >
-                <Ionicons name="bookmark-outline" size={20} color="#334155" style={{ width: 30 }} />
-                <Text style={styles.drawerRowText}>Bookmarks ({Object.values(bookmarkedIds).filter(Boolean).length})</Text>
+                <Ionicons name="newspaper-outline" size={18} color="#334155" style={{ width: 26 }} />
+                <Text style={styles.drawerRowText}>{t.epaper}</Text>
               </TouchableOpacity>
             </ScrollView>
 
-            {/* Bottom Drawer Actions */}
-            <View style={styles.drawerFooter}>
-              <TouchableOpacity
-                style={styles.footerActionItem}
-                onPress={() => openFeatureModal('Talk to Us', 'Send questions or news tips to editorial@oxnews.app')}
-              >
-                <Ionicons name="mail-outline" size={18} color="#334155" />
-                <Text style={styles.footerActionText}>Talk to us</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.footerActionItem} onPress={() => { setDrawerOpen(false); setSearchModalOpen(true); }}>
-                <Ionicons name="search-outline" size={18} color="#334155" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.footerActionItem} onPress={() => openFeatureModal('Settings', 'App Version: 1.0.5\nTheme: Light\nPush Notifications: Active')}>
-                <Ionicons name="settings-outline" size={18} color="#334155" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.drawerCloseBtn} onPress={() => setDrawerOpen(false)}>
+              <Ionicons name="close" size={20} color="#1E293B" />
+              <Text style={{ marginLeft: 6, fontWeight: '700' }}>{t.close}</Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setDrawerOpen(false)} />
         </View>
       </Modal>
 
-      {/* CITY PICKER MODAL */}
+      {/* CITY SELECTION MODAL */}
       <Modal visible={cityModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.citySheet}>
-            <Text style={styles.sheetTitle}>Select Your City</Text>
+            <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अपना शहर चुनें' : 'Select Your City'}</Text>
             {CITIES.map((city) => (
               <TouchableOpacity
                 key={city}
@@ -538,37 +660,14 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* SEARCH MODAL */}
-      <Modal visible={searchModalOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.searchSheet}>
-            <View style={styles.searchBarRow}>
-              <TextInput
-                placeholder="Search topics, news, stocks..."
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-              <TouchableOpacity style={styles.searchBtn} onPress={handleSearchSubmit}>
-                <Text style={{ color: '#FFF', fontWeight: '700' }}>Search</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setSearchModalOpen(false)}>
-              <Text style={{ color: '#64748B', fontWeight: '600' }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* GENERIC FEATURE DETAIL MODAL */}
+      {/* INFO / POPUP MODAL */}
       <Modal visible={featureModal.visible} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.featureCard}>
             <Text style={styles.featureTitle}>{featureModal.title}</Text>
             <Text style={styles.featureContent}>{featureModal.content}</Text>
             <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setFeatureModal({ visible: false, title: '', content: '' })}>
-              <Text style={styles.featureCloseBtnText}>Done</Text>
+              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -582,7 +681,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFF8F5' },
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
-    height: 52,
+    height: 54,
     backgroundColor: '#FFF8F5',
     flexDirection: 'row',
     alignItems: 'center',
@@ -590,13 +689,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   mastheadTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     fontFamily: 'serif',
     color: '#000000',
   },
   iconBtn: { padding: 4 },
+  langSwitchBtn: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  langSwitchText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
   quickServicesBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -644,7 +755,7 @@ const styles = StyleSheet.create({
   categoryTabTextActive: { color: '#000000' },
   listContent: { paddingBottom: 24 },
   leadCard: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  leadTitle: { fontSize: 19, fontWeight: '800', lineHeight: 25, color: '#0F172A', marginBottom: 10 },
+  leadTitle: { fontSize: 18, fontWeight: '800', lineHeight: 25, color: '#0F172A', marginBottom: 10 },
   leadImage: { width: '100%', height: 210, borderRadius: 8, backgroundColor: '#F1F5F9' },
   compactCard: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   compactRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -696,8 +807,8 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: '#DC2626', fontWeight: '800' },
   tabLabelExclusive: { color: '#CA8A04', fontWeight: '800' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  bottomSheetCard: { backgroundColor: '#FFF8F5', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  bottomSheetCard: { backgroundColor: '#FFF8F5', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, width: '100%', position: 'absolute', bottom: 0 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sheetTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
   sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -710,23 +821,20 @@ const styles = StyleSheet.create({
   drawerProfileText: { fontSize: 12, color: '#475569', textAlign: 'center', marginBottom: 10, fontWeight: '500' },
   signInBtn: { backgroundColor: '#0F172A', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6, width: '100%', alignItems: 'center' },
   signInBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
-  drawerSectionHeading: { fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 10, marginTop: 6 },
+  drawerSectionHeading: { fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 10, marginTop: 6 },
   drawerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   drawerRowText: { fontSize: 14, fontWeight: '600', color: '#334155' },
   drawerDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
-  drawerFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  footerActionItem: { flexDirection: 'row', alignItems: 'center' },
-  footerActionText: { marginLeft: 4, fontSize: 12, fontWeight: '700', color: '#334155' },
-  citySheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
+  drawerCloseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  citySheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
   cityOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   cityOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
-  searchSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
-  searchBarRow: { flexDirection: 'row', alignItems: 'center' },
-  searchInput: { flex: 1, height: 44, backgroundColor: '#F1F5F9', borderRadius: 8, paddingHorizontal: 14, fontSize: 15 },
-  searchBtn: { backgroundColor: '#0F172A', paddingHorizontal: 16, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginLeft: 8 },
-  featureCard: { backgroundColor: '#FFFFFF', margin: 24, borderRadius: 16, padding: 24, alignSelf: 'center', width: width * 0.85 },
+  featureCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
   featureTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
-  featureContent: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 20 },
-  featureCloseBtn: { backgroundColor: '#DC2626', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  featureContent: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 16 },
+  featureCloseBtn: { backgroundColor: '#DC2626', paddingVertical: 10, borderRadius: 8, alignItems: 'center', marginTop: 10 },
   featureCloseBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  quizOptionBtn: { backgroundColor: '#F1F5F9', padding: 12, borderRadius: 8, marginBottom: 8 },
+  quizOptionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#16A34A', borderWidth: 1 },
+  quizOptionText: { fontSize: 14, color: '#1E293B', fontWeight: '600' },
 });
