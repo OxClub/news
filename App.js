@@ -17,9 +17,10 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { getHeadlines } from './src/api/newsApi';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const STRINGS = {
   en: {
@@ -28,16 +29,13 @@ const STRINGS = {
     ticker: 'Cyber Security Alert: New financial malware targeting Indian banking portals.',
     sectionsTitle: 'SECTIONS',
     shortcuts: 'STATE & CITIES',
-    bookmarks: 'Bookmarks',
     epaper: 'ePaper',
-    talkToUs: 'Talk to us',
     changeCity: 'Select State / City',
     isThisCity: 'Current Location:',
     subscribe: 'SUBSCRIBE',
     marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
     close: 'Close',
     back: 'Back',
-    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'States', explore: 'Explore', exclusives: 'Cyber Sec' },
     cats: { India: 'India', CyberSec: 'Cyber Security', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Tech', Science: 'Science' },
   },
@@ -47,16 +45,13 @@ const STRINGS = {
     ticker: 'साइबर सुरक्षा चेतावनी: भारतीय बैंकिंग पोर्टल्स को निशाना बनाने वाला नया मैलवेयर पकड़ा गया।',
     sectionsTitle: 'प्रमुख श्रेणियां',
     shortcuts: 'राज्य एवं शहर',
-    bookmarks: 'सहेजे गए समाचार',
     epaper: 'ई-पेपर',
-    talkToUs: 'हमसे संपर्क करें',
     changeCity: 'राज्य/शहर बदलें',
     isThisCity: 'वर्तमान क्षेत्र:',
     subscribe: 'सब्सक्राइब',
     marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
     close: 'बंद करें',
     back: 'वापस जाएं',
-    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'राज्य', explore: 'एक्सप्लोर', exclusives: 'साइबर सुरक्षा' },
     cats: { India: 'भारत', CyberSec: 'साइबर सुरक्षा', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
   },
@@ -80,18 +75,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // WebView In-App Reader Modal
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
-
-  // Feature Screens
-  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null); // 'astrology', 'epaper', 'awards', 'quiz', 'aiq'
-
-  // Menus
+  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreModalOpen, setMoreModalOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
-  // Bookmarks & Dismissals
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
@@ -99,9 +88,9 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Stock Market India Sensex';
+      if (activeTab === 'markets') query = 'Stock Market India';
       else if (activeTab === 'delhi') query = selectedLocation + ' news';
-      else if (activeTab === 'exclusives') query = 'Cyber security hacking scam India';
+      else if (activeTab === 'exclusives') query = 'Cyber security hacking India';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -125,10 +114,7 @@ export default function App() {
   const toggleBookmark = (id, title) => {
     const isNow = !bookmarkedIds[id];
     setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
-    Alert.alert(
-      lang === 'hi' ? (isNow ? 'सहेज लिया गया' : 'हटा दिया गया') : (isNow ? 'Bookmarked' : 'Removed'),
-      title.slice(0, 45) + '...'
-    );
+    Alert.alert(lang === 'hi' ? (isNow ? 'सहेज लिया गया' : 'हटा दिया गया') : (isNow ? 'Bookmarked' : 'Removed'), title.slice(0, 40));
   };
 
   const openFullArticle = (article) => {
@@ -143,7 +129,7 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F5" />
 
-      {/* TOP HEADER */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconBtn}>
           <Ionicons name="menu" size={28} color="#1E293B" />
@@ -153,18 +139,16 @@ export default function App() {
           <Text style={styles.mastheadTitle}>{t.title}</Text>
         </TouchableOpacity>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
-            <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
+          <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* MAIN CONTAINER */}
+      {/* BODY CONTAINER */}
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            {/* Quick Action Buttons */}
+            {/* Quick Action Bar */}
             <View style={styles.quickServicesBar}>
               <TouchableOpacity style={styles.quickServiceItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
                 <View style={styles.quickIconCircle}>
@@ -202,7 +186,7 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Must Read Ticker */}
+            {/* Ticker */}
             <TouchableOpacity style={styles.tickerCard} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
@@ -212,7 +196,7 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            {/* Horizontal Categories */}
+            {/* Categories */}
             <View style={styles.categoryScrollWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
                 {SECTIONS.map((sec) => {
@@ -234,7 +218,7 @@ export default function App() {
           </>
         )}
 
-        {/* States & Cities Header */}
+        {/* State / City Selector Header */}
         {activeTab === 'delhi' && (
           <View style={styles.citySelectorBanner}>
             <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedLocation}</Text></Text>
@@ -244,7 +228,7 @@ export default function App() {
           </View>
         )}
 
-        {/* Explore Categories Strip */}
+        {/* Explore Filters */}
         {activeTab === 'explore' && (
           <View style={styles.exploreFilterRow}>
             {['All', 'CyberSec', 'Investing', 'Technology', 'Science'].map((item) => (
@@ -261,7 +245,7 @@ export default function App() {
           </View>
         )}
 
-        {/* ARTICLES FEED */}
+        {/* FEED */}
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#DC2626" />
@@ -276,29 +260,15 @@ export default function App() {
               const isLargeLead = index === 0;
               const isBookmarked = !!bookmarkedIds[item.id];
 
-              // Insert AdMob test banner after every 4 articles
-              const showInFeedAd = index > 0 && index % 4 === 0;
-
               return (
                 <View>
-                  {showInFeedAd && (
-                    <View style={styles.inFeedAdBox}>
-                      <View style={styles.adTagSmall}><Text style={styles.adTagSmallText}>Ad</Text></View>
-                      <Text style={styles.inFeedAdText}>AdMob Banner: ca-app-pub-3940256099942544/6300978111</Text>
-                    </View>
-                  )}
-
                   {isLargeLead ? (
                     <View style={styles.leadCard}>
                       <View style={styles.metaRow}>
                         <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
                         <View style={styles.actionIconRow}>
                           <TouchableOpacity style={{ marginRight: 14 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                            <Ionicons
-                              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                              size={18}
-                              color={isBookmarked ? '#DC2626' : '#64748B'}
-                            />
+                            <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked ? '#DC2626' : '#64748B'} />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                             <Ionicons name="close" size={19} color="#64748B" />
@@ -319,11 +289,7 @@ export default function App() {
                         <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
                         <View style={styles.actionIconRow}>
                           <TouchableOpacity style={{ marginRight: 10 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                            <Ionicons
-                              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                              size={17}
-                              color={isBookmarked ? '#DC2626' : '#64748B'}
-                            />
+                            <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={isBookmarked ? '#DC2626' : '#64748B'} />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                             <Ionicons name="close" size={17} color="#64748B" />
@@ -332,9 +298,7 @@ export default function App() {
                       </View>
                       <TouchableOpacity style={styles.compactRow} onPress={() => openFullArticle(item)}>
                         <View style={styles.compactTextCol}>
-                          <Text style={styles.compactTitle} numberOfLines={3}>
-                            {item.title}
-                          </Text>
+                          <Text style={styles.compactTitle} numberOfLines={3}>{item.title}</Text>
                         </View>
                         {item.image_url ? (
                           <Image source={{ uri: item.image_url }} style={styles.compactThumb} />
@@ -353,13 +317,16 @@ export default function App() {
         )}
       </View>
 
-      {/* ADMOB STICKY FOOTER TEST BANNER */}
-      <View style={styles.admobBannerBar}>
-        <View style={styles.admobTag}><Text style={styles.admobTagText}>Ad</Text></View>
-        <Text style={styles.admobBannerText} numberOfLines={1}>{t.admobNotice}</Text>
+      {/* ADMOB STICKY BANNER AD (OFFICIAL GOOGLE TEST BANNER) */}
+      <View style={styles.admobContainer}>
+        <BannerAd
+          unitId={TestIds.BANNER}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        />
       </View>
 
-      {/* 5-TAB BOTTOM NAVIGATION */}
+      {/* BOTTOM TAB BAR */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('newsfeed')}>
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
@@ -387,7 +354,7 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* IN-APP MULTI-PAGE WEBVIEW READER */}
+      {/* WEBVIEW MODAL */}
       <Modal visible={webViewModal.visible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -404,7 +371,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: COMPLETE 12 RASHIFAL SCREEN */}
+      {/* RASHIFAL MODAL (ALL 12 ZODIAC) */}
       <Modal visible={activeFeatureScreen === 'astrology'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
           <View style={styles.readerHeader}>
@@ -431,9 +398,7 @@ export default function App() {
               { rashi: 'मीन (Pisces)', desc: 'आध्यात्मिक झुकाव रहेगा। आर्थिक मामलों में समझदारी से निर्णय लें।' },
             ].map((item, idx) => (
               <View key={idx} style={styles.horoscopeCard}>
-                <View style={styles.rashiBadge}>
-                  <Text style={styles.rashiBadgeText}>{item.rashi}</Text>
-                </View>
+                <View style={styles.rashiBadge}><Text style={styles.rashiBadgeText}>{item.rashi}</Text></View>
                 <Text style={styles.horoscopeText}>{item.desc}</Text>
               </View>
             ))}
@@ -441,7 +406,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: E-PAPER */}
+      {/* E-PAPER MODAL */}
       <Modal visible={activeFeatureScreen === 'epaper'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
           <View style={styles.readerHeader}>
@@ -465,7 +430,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: AWARDS */}
+      {/* AWARDS MODAL */}
       <Modal visible={activeFeatureScreen === 'awards'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -490,7 +455,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: QUIZ */}
+      {/* QUIZ MODAL */}
       <Modal visible={activeFeatureScreen === 'quiz'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -518,11 +483,8 @@ export default function App() {
           <View style={styles.bottomSheetCard}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अन्य सेवाएं' : 'More Services'}</Text>
-              <TouchableOpacity onPress={() => setMoreModalOpen(false)}>
-                <Ionicons name="close" size={22} color="#475569" />
-              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setMoreModalOpen(false)}><Ionicons name="close" size={22} color="#475569" /></TouchableOpacity>
             </View>
-
             <View style={styles.sheetGrid}>
               {[
                 { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('astrology'); } },
@@ -531,9 +493,7 @@ export default function App() {
                 { title: lang === 'hi' ? 'क्विज़' : 'Quiz', icon: 'puzzle-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('quiz'); } },
               ].map((item, idx) => (
                 <TouchableOpacity key={idx} style={styles.sheetGridItem} onPress={item.action}>
-                  <View style={styles.quickIconCircle}>
-                    <MaterialCommunityIcons name={item.icon} size={22} color="#9A3412" />
-                  </View>
+                  <View style={styles.quickIconCircle}><MaterialCommunityIcons name={item.icon} size={22} color="#9A3412" /></View>
                   <Text style={styles.sheetItemText}>{item.title}</Text>
                 </TouchableOpacity>
               ))}
@@ -550,11 +510,10 @@ export default function App() {
               <View style={styles.drawerProfileBox}>
                 <View style={styles.profileAvatar}><Ionicons name="person" size={26} color="#FFF" /></View>
                 <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'प्रोफ़ाइल सिंक करें' : 'Sign in to sync bookmarks'}</Text>
-                <TouchableOpacity style={styles.signInBtn} onPress={() => Alert.alert('OX Account', 'Logged in successfully.')}>
+                <TouchableOpacity style={styles.signInBtn} onPress={() => Alert.alert('OX Account', 'Logged in.')}>
                   <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In →'}</Text>
                 </TouchableOpacity>
               </View>
-
               <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
               {SECTIONS.map((sec) => (
                 <TouchableOpacity key={sec} style={styles.drawerRow} onPress={() => { setActiveCategory(sec); setDrawerOpen(false); }}>
@@ -564,15 +523,14 @@ export default function App() {
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.drawerCloseBtn} onPress={() => setDrawerOpen(false)}>
-              <Ionicons name="close" size={20} color="#1E293B" />
-              <Text style={{ marginLeft: 6, fontWeight: '700' }}>{t.close}</Text>
+              <Ionicons name="close" size={20} color="#1E293B" /><Text style={{ marginLeft: 6, fontWeight: '700' }}>{t.close}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setDrawerOpen(false)} />
         </View>
       </Modal>
 
-      {/* STATES & CITIES SELECTION MODAL */}
+      {/* STATE / CITY MODAL */}
       <Modal visible={locationModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.citySheet}>
@@ -604,67 +562,18 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFF8F5' },
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    height: 54,
-    backgroundColor: '#FFF8F5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  mastheadTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    fontFamily: 'serif',
-    color: '#000000',
-  },
+  header: { height: 54, backgroundColor: '#FFF8F5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  mastheadTitle: { fontSize: 19, fontWeight: '900', letterSpacing: 1.5, fontFamily: 'serif', color: '#000000' },
   iconBtn: { padding: 4 },
-  langSwitchBtn: {
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 4,
-  },
+  langSwitchBtn: { backgroundColor: '#0F172A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   langSwitchText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-  quickServicesBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#FFF8F5',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FEE2E2',
-  },
+  quickServicesBar: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#FFF8F5', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#FEE2E2' },
   quickServiceItem: { alignItems: 'center' },
-  quickIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-  },
+  quickIconCircle: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', elevation: 2 },
   aiqIconText: { fontSize: 12, fontWeight: '800', color: '#9A3412' },
   quickServiceText: { fontSize: 11, marginTop: 4, color: '#475569', fontWeight: '600' },
-  tickerCard: {
-    marginHorizontal: 14,
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#FFF5F5',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  tickerBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#DC2626',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 4,
-  },
+  tickerCard: { marginHorizontal: 14, marginTop: 10, padding: 10, backgroundColor: '#FFF5F5', borderRadius: 10, borderWidth: 1, borderColor: '#FECACA' },
+  tickerBadge: { alignSelf: 'flex-start', backgroundColor: '#DC2626', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
   tickerBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   tickerTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B', lineHeight: 18 },
   categoryScrollWrapper: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
@@ -686,16 +595,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' },
   actionIconRow: { flexDirection: 'row', alignItems: 'center' },
-  citySelectorBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
+  citySelectorBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   citySelectorText: { fontSize: 13, color: '#334155' },
   changeCityBtn: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   changeCityBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
@@ -704,41 +604,8 @@ const styles = StyleSheet.create({
   explorePillActive: { backgroundColor: '#0F172A' },
   explorePillText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
   explorePillTextActive: { color: '#FFFFFF' },
-  inFeedAdBox: {
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    padding: 10,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  adTagSmall: { backgroundColor: '#D97706', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: 8 },
-  adTagSmallText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
-  inFeedAdText: { fontSize: 11, color: '#78350F', fontFamily: 'monospace', flex: 1 },
-  admobBannerBar: {
-    backgroundColor: '#F8FAFC',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  admobTag: { backgroundColor: '#E2E8F0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: 8 },
-  admobTagText: { fontSize: 10, fontWeight: '800', color: '#64748B' },
-  admobBannerText: { fontSize: 11, color: '#64748B', flex: 1, fontFamily: 'monospace' },
-  bottomBar: {
-    height: 56,
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
+  admobContainer: { alignItems: 'center', backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingVertical: 2 },
+  bottomBar: { height: 56, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0', alignItems: 'center', justifyContent: 'space-around' },
   tabItem: { alignItems: 'center' },
   tabLabel: { fontSize: 10, marginTop: 2, color: '#64748B', fontWeight: '600' },
   tabLabelActive: { color: '#DC2626', fontWeight: '800' },
@@ -766,15 +633,7 @@ const styles = StyleSheet.create({
   citySheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
   cityOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   cityOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
-  readerHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
+  readerHeader: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   readerBackBtn: { flexDirection: 'row', alignItems: 'center' },
   readerBackText: { fontSize: 14, fontWeight: '700', marginLeft: 6, color: '#0F172A' },
   readerHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center', marginHorizontal: 12 },
