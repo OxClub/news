@@ -16,7 +16,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
@@ -38,7 +38,6 @@ const STRINGS = {
     marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
     close: 'Close',
     back: 'Back',
-    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'States', explore: 'Explore', exclusives: 'Cyber Sec' },
     cats: { India: 'India', CyberSec: 'Cyber Security', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Tech', Science: 'Science' },
   },
@@ -55,7 +54,6 @@ const STRINGS = {
     marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
     close: 'बंद करें',
     back: 'वापस जाएं',
-    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'राज्य', explore: 'एक्सप्लोर', exclusives: 'साइबर सुरक्षा' },
     cats: { India: 'भारत', CyberSec: 'साइबर सुरक्षा', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
   },
@@ -79,13 +77,14 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Cloud & Real Google Auth State
+  // Cloud & Auth State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'googleInput'
   const [authName, setAuthName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [googleInputEmail, setGoogleInputEmail] = useState('');
 
   // Modals & Navigation
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
@@ -98,7 +97,6 @@ export default function App() {
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
-  // Load Session on Startup
   useEffect(() => {
     (async () => {
       try {
@@ -135,48 +133,28 @@ export default function App() {
     loadFeed();
   }, [loadFeed]);
 
-  // Real Google Sign-In Prompt with Custom Email Input for live testing
-  const handleGoogleSignIn = () => {
-    Alert.prompt
-      ? Alert.prompt(
-          lang === 'hi' ? 'गूगल साइन-इन' : 'Google Sign-In',
-          lang === 'hi' ? 'कृपया अपना असली गूगल ईमेल आईडी दर्ज करें:' : 'Please enter your actual Google Email ID:',
-          [
-            { text: lang === 'hi' ? 'रद्द करें' : 'Cancel', style: 'cancel' },
-            {
-              text: 'OK',
-              onPress: async (inputEmail) => {
-                if (!inputEmail || !inputEmail.includes('@')) {
-                  Alert.alert('Error', 'Invalid email address');
-                  return;
-                }
-                const cleanEmail = inputEmail.trim().toLowerCase();
-                const namePart = cleanEmail.split('@')[0];
-                const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+  // Handle Real Google Email Submission via In-App Form
+  const handleGoogleEmailSubmit = async () => {
+    if (!googleInputEmail.trim() || !googleInputEmail.includes('@')) {
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया सही ईमेल दर्ज करें।' : 'Please enter a valid email.');
+      return;
+    }
+    const cleanEmail = googleInputEmail.trim().toLowerCase();
+    const namePart = cleanEmail.split('@')[0];
+    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1) + ' (Google)';
 
-                const googleUser = {
-                  name: formattedName,
-                  email: cleanEmail,
-                  isGuest: false,
-                  provider: 'Google',
-                };
-                await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
-                setCurrentUser(googleUser);
-                setAuthModalOpen(false);
-                Alert.alert(
-                  lang === 'hi' ? 'स्वागत है' : 'Welcome',
-                  `${lang === 'hi' ? 'सफलतापूर्वक लॉगिन हुआ:' : 'Successfully signed in as'} ${cleanEmail}`
-                );
-              },
-            },
-          ],
-          'plain-text',
-          'myname@gmail.com'
-        )
-      : Alert.alert(
-          'Google Sign-In',
-          'Please use email/password sign up or enter details in settings.'
-        );
+    const googleUser = {
+      name: formattedName,
+      email: cleanEmail,
+      isGuest: false,
+      provider: 'Google',
+    };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
+    setCurrentUser(googleUser);
+    setAuthModalOpen(false);
+    setGoogleInputEmail('');
+    setAuthMode('login');
+    Alert.alert(lang === 'hi' ? 'सफल लॉगिन' : 'Success', `${lang === 'hi' ? 'स्वागत है,' : 'Welcome,'} ${cleanEmail}`);
   };
 
   const handleCloudSignUp = async () => {
@@ -188,7 +166,7 @@ export default function App() {
       const emailKey = authEmail.trim().toLowerCase();
       const existing = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
       if (existing) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से अकाउंट पहले से मौजूद है।' : 'Account already exists with this email.');
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से अकाउंट पहले से मौजूद है।' : 'Account already exists.');
         return;
       }
       const userData = { name: authName.trim(), email: emailKey, password: authPassword.trim() };
@@ -201,7 +179,7 @@ export default function App() {
       setAuthName('');
       setAuthEmail('');
       setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'खाता सफलतापूर्वक बन गया है!' : 'Account created successfully!');
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'खाता सफलतापूर्वक बन गया है!' : 'Account created!');
     } catch (e) {
       Alert.alert('Error', e.message);
     }
@@ -216,7 +194,7 @@ export default function App() {
       const emailKey = authEmail.trim().toLowerCase();
       const record = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
       if (!record) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'खाता नहीं मिला। कृपया साइन अप करें।' : 'Account not found. Please sign up.');
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'खाता नहीं मिला। कृपया साइन अप करें।' : 'Account not found.');
         return;
       }
       const parsed = JSON.parse(record);
@@ -230,18 +208,18 @@ export default function App() {
       setAuthModalOpen(false);
       setAuthEmail('');
       setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${lang === 'hi' ? 'लॉगिन सफल,' : 'Welcome back,'} ${parsed.name}!`);
+      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${parsed.name}!`);
     } catch (e) {
       Alert.alert('Error', e.message);
     }
   };
 
   const handleAnonymousGuest = async () => {
-    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: lang === 'hi' ? 'अनाम सत्र (Guest Session)' : 'Guest Session Active', isGuest: true };
+    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: lang === 'hi' ? 'अनाम सत्र सक्रिय' : 'Guest Session Active', isGuest: true };
     await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(guestSession));
     setCurrentUser(guestSession);
     setAuthModalOpen(false);
-    Alert.alert(lang === 'hi' ? 'अनाम मोड' : 'Guest Mode', lang === 'hi' ? 'आप अनाम (Anonymous) रूप से ब्राउज़ कर रहे हैं।' : 'Browsing anonymously.');
+    Alert.alert(lang === 'hi' ? 'अनाम मोड' : 'Guest Mode', lang === 'hi' ? 'आप अनाम रूप से ब्राउज़ कर रहे हैं।' : 'Browsing anonymously.');
   };
 
   const handleLogout = async () => {
@@ -645,84 +623,113 @@ export default function App() {
           <View style={styles.authCard}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>
-                {authMode === 'login' ? (lang === 'hi' ? 'खाते में प्रवेश करें' : 'Sign In') : (lang === 'hi' ? 'नया खाता बनाएं' : 'Sign Up')}
+                {authMode === 'googleInput' 
+                  ? (lang === 'hi' ? 'अपना गूगल ईमेल दर्ज करें' : 'Enter Google Email')
+                  : authMode === 'login' 
+                    ? (lang === 'hi' ? 'खाते में प्रवेश करें' : 'Sign In') 
+                    : (lang === 'hi' ? 'नया खाता बनाएं' : 'Sign Up')}
               </Text>
-              <TouchableOpacity onPress={() => setAuthModalOpen(false)}>
+              <TouchableOpacity onPress={() => { setAuthModalOpen(false); setAuthMode('login'); }}>
                 <Ionicons name="close" size={22} color="#475569" />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.googleSignInBtn} onPress={handleGoogleSignIn}>
-              <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 10 }} />
-              <Text style={styles.googleSignInText}>
-                {lang === 'hi' ? 'अपना असली गूगल ईमेल दर्ज करें' : 'Sign in with Google Email'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.authDividerRow}>
-              <View style={styles.authDividerLine} />
-              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या ईमेल से' : 'OR EMAIL'}</Text>
-              <View style={styles.authDividerLine} />
-            </View>
-
-            {authMode === 'signup' && (
-              <TextInput
-                placeholder={lang === 'hi' ? 'आपका पूरा नाम' : 'Full Name'}
-                style={styles.authInput}
-                value={authName}
-                onChangeText={setAuthName}
-              />
-            )}
-
-            <TextInput
-              placeholder={lang === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
-              style={styles.authInput}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={authEmail}
-              onChangeText={setAuthEmail}
-            />
-
-            <TextInput
-              placeholder={lang === 'hi' ? 'पासवर्ड' : 'Password'}
-              style={styles.authInput}
-              secureTextEntry
-              value={authPassword}
-              onChangeText={setAuthPassword}
-            />
-
-            <TouchableOpacity
-              style={styles.authSubmitBtn}
-              onPress={authMode === 'login' ? handleCloudLogIn : handleCloudSignUp}
-            >
-              <Text style={styles.authSubmitBtnText}>
-                {authMode === 'login' ? (lang === 'hi' ? 'लॉगिन करें' : 'Sign In') : (lang === 'hi' ? 'रजिस्टर करें' : 'Sign Up')}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.authToggleRow}>
-              <Text style={{ fontSize: 13, color: '#64748B' }}>
-                {authMode === 'login' ? (lang === 'hi' ? 'नया अकाउंट बनाएं?' : "Don't have an account?") : (lang === 'hi' ? 'पहले से अकाउंट है?' : 'Already have an account?')}
-              </Text>
-              <TouchableOpacity onPress={() => setAuthMode(m => m === 'login' ? 'signup' : 'login')}>
-                <Text style={styles.authToggleBtnText}>
-                  {authMode === 'login' ? (lang === 'hi' ? ' साइन अप' : ' Sign Up') : (lang === 'hi' ? ' लॉगिन' : ' Login')}
+            {authMode === 'googleInput' ? (
+              <View>
+                <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10 }}>
+                  {lang === 'hi' ? 'अपने गूगल अकाउंट की ईमेल आईडी यहाँ लिखें:' : 'Enter your Google account email below:'}
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <TextInput
+                  placeholder="yourname@gmail.com"
+                  style={styles.authInput}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={googleInputEmail}
+                  onChangeText={setGoogleInputEmail}
+                />
+                <TouchableOpacity style={styles.authSubmitBtn} onPress={handleGoogleEmailSubmit}>
+                  <Text style={styles.authSubmitBtnText}>{lang === 'hi' ? 'जारी रखें' : 'Continue'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.guestLoginBtn, { marginTop: 10 }]} onPress={() => setAuthMode('login')}>
+                  <Text style={styles.guestLoginBtnText}>{lang === 'hi' ? 'वापस जाएं' : 'Back'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                {/* GOOGLE SIGN IN BUTTON */}
+                <TouchableOpacity style={styles.googleSignInBtn} onPress={() => setAuthMode('googleInput')}>
+                  <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 10 }} />
+                  <Text style={styles.googleSignInText}>
+                    {lang === 'hi' ? 'गूगल (Google) से साइन इन करें' : 'Sign in with Google'}
+                  </Text>
+                </TouchableOpacity>
 
-            <View style={styles.authDividerRow}>
-              <View style={styles.authDividerLine} />
-              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या' : 'OR'}</Text>
-              <View style={styles.authDividerLine} />
-            </View>
+                <View style={styles.authDividerRow}>
+                  <View style={styles.authDividerLine} />
+                  <Text style={styles.authDividerText}>{lang === 'hi' ? 'या ईमेल से' : 'OR EMAIL'}</Text>
+                  <View style={styles.authDividerLine} />
+                </View>
 
-            <TouchableOpacity style={styles.guestLoginBtn} onPress={handleAnonymousGuest}>
-              <Ionicons name="person-circle-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
-              <Text style={styles.guestLoginBtnText}>
-                {lang === 'hi' ? 'अनाम (Guest) के रूप में जारी रखें' : 'Continue as Guest (Anonymous)'}
-              </Text>
-            </TouchableOpacity>
+                {authMode === 'signup' && (
+                  <TextInput
+                    placeholder={lang === 'hi' ? 'आपका पूरा नाम' : 'Full Name'}
+                    style={styles.authInput}
+                    value={authName}
+                    onChangeText={setAuthName}
+                  />
+                )}
+
+                <TextInput
+                  placeholder={lang === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
+                  style={styles.authInput}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={authEmail}
+                  onChangeText={setAuthEmail}
+                />
+
+                <TextInput
+                  placeholder={lang === 'hi' ? 'पासवर्ड' : 'Password'}
+                  style={styles.authInput}
+                  secureTextEntry
+                  value={authPassword}
+                  onChangeText={setAuthPassword}
+                />
+
+                <TouchableOpacity
+                  style={styles.authSubmitBtn}
+                  onPress={authMode === 'login' ? handleCloudLogIn : handleCloudSignUp}
+                >
+                  <Text style={styles.authSubmitBtnText}>
+                    {authMode === 'login' ? (lang === 'hi' ? 'लॉगिन करें' : 'Sign In') : (lang === 'hi' ? 'रजिस्टर करें' : 'Sign Up')}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.authToggleRow}>
+                  <Text style={{ fontSize: 13, color: '#64748B' }}>
+                    {authMode === 'login' ? (lang === 'hi' ? 'नया अकाउंट बनाएं?' : "Don't have an account?") : (lang === 'hi' ? 'पहले से अकाउंट है?' : 'Already have an account?')}
+                  </Text>
+                  <TouchableOpacity onPress={() => setAuthMode(m => m === 'login' ? 'signup' : 'login')}>
+                    <Text style={styles.authToggleBtnText}>
+                      {authMode === 'login' ? (lang === 'hi' ? ' साइन अप' : ' Sign Up') : (lang === 'hi' ? ' लॉगिन' : ' Login')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.authDividerRow}>
+                  <View style={styles.authDividerLine} />
+                  <Text style={styles.authDividerText}>{lang === 'hi' ? 'या' : 'OR'}</Text>
+                  <View style={styles.authDividerLine} />
+                </View>
+
+                <TouchableOpacity style={styles.guestLoginBtn} onPress={handleAnonymousGuest}>
+                  <Ionicons name="person-circle-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
+                  <Text style={styles.guestLoginBtnText}>
+                    {lang === 'hi' ? 'अनाम (Guest) के रूप में जारी रखें' : 'Continue as Guest (Anonymous)'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
