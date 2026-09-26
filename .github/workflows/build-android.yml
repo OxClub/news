@@ -27,7 +27,26 @@ jobs:
       - name: Install Project Dependencies
         run: |
           npm install --legacy-peer-deps
-          npx expo install react-native-webview
+          npm install sharp-cli -g
+
+      - name: Rasterize High-Res PNG Icons from SVG & Place in Android Mipmap
+        run: |
+          sharp -i assets/icon.svg -o assets/icon.png resize 512 512
+          sharp -i assets/icon.svg -o assets/adaptive-icon.png resize 512 512
+          sharp -i assets/icon.svg -o assets/splash-icon.png resize 512 512
+
+          # Generate standard Android mipmap sizes so launcher picks it up natively
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher.png resize 48 48
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png resize 72 72
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png resize 96 96
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png resize 144 144
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png resize 192 192
+
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png resize 48 48
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png resize 72 72
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png resize 96 96
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png resize 144 144
+          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png resize 192 192
 
       - name: Prebuild Native Android Directory
         run: npx expo prebuild --platform android --clean
