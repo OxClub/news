@@ -39,16 +39,6 @@ jobs:
       - name: Prebuild Native Android Directory
         run: npx expo prebuild --platform android --clean
 
-      - name: Bundle Latest JavaScript Assets
-        run: |
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res/
-
       - name: Setup Keystore from Secret
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
