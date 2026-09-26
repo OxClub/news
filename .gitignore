@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+android/
+ios/
+release.keystore
+keystore_base64.txt
+npm-debug.*
+*.log
