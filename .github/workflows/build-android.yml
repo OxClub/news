@@ -1,0 +1,84 @@
+name: Build Android APK and AAB
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Prebuild Native Android Directory
+        run: npx expo prebuild --platform android --clean
+
+      - name: Setup Keystore from Secret
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Inject Release Signing Configuration
+        run: |
+          cat << 'GRADLE_CONF' >> android/app/build.gradle
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('release.keystore')
+                      storePassword "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+                      keyAlias "${{ secrets.ANDROID_KEY_ALIAS }}"
+                      keyPassword "${{ secrets.ANDROID_KEY_PASSWORD }}"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          GRADLE_CONF
+
+      - name: Grant Executable Permissions to Gradle
+        run: chmod +x android/gradlew
+
+      - name: Build Standalone Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Build Play Store Production AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NewsPulse-Release-APK
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
+
+      - name: Upload Google Play AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: NewsPulse-PlayStore-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 14
