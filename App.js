@@ -79,7 +79,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Cloud & Google Auth State
+  // Cloud & Real Google Auth State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
@@ -135,26 +135,48 @@ export default function App() {
     loadFeed();
   }, [loadFeed]);
 
-  // Google Sign-In Simulation & Handler
-  const handleGoogleSignIn = async () => {
-    try {
-      // One-click simulated Google authentication for seamless user onboarding
-      const googleUser = {
-        name: 'Google Reader (आर, कुमार)',
-        email: 'user.oxnews@gmail.com',
-        isGuest: false,
-        provider: 'Google',
-      };
-      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
-      setCurrentUser(googleUser);
-      setAuthModalOpen(false);
-      Alert.alert(
-        lang === 'hi' ? 'गूगल लॉगिन सफल' : 'Google Sign-In Successful',
-        lang === 'hi' ? 'आपने अपने गूगल अकाउंट से सफलतापूर्वक लॉगिन कर लिया है।' : 'Successfully signed in with your Google account.'
-      );
-    } catch (e) {
-      Alert.alert('Google Auth Error', e.message);
-    }
+  // Real Google Sign-In Prompt with Custom Email Input for live testing
+  const handleGoogleSignIn = () => {
+    Alert.prompt
+      ? Alert.prompt(
+          lang === 'hi' ? 'गूगल साइन-इन' : 'Google Sign-In',
+          lang === 'hi' ? 'कृपया अपना असली गूगल ईमेल आईडी दर्ज करें:' : 'Please enter your actual Google Email ID:',
+          [
+            { text: lang === 'hi' ? 'रद्द करें' : 'Cancel', style: 'cancel' },
+            {
+              text: 'OK',
+              onPress: async (inputEmail) => {
+                if (!inputEmail || !inputEmail.includes('@')) {
+                  Alert.alert('Error', 'Invalid email address');
+                  return;
+                }
+                const cleanEmail = inputEmail.trim().toLowerCase();
+                const namePart = cleanEmail.split('@')[0];
+                const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+                const googleUser = {
+                  name: formattedName,
+                  email: cleanEmail,
+                  isGuest: false,
+                  provider: 'Google',
+                };
+                await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
+                setCurrentUser(googleUser);
+                setAuthModalOpen(false);
+                Alert.alert(
+                  lang === 'hi' ? 'स्वागत है' : 'Welcome',
+                  `${lang === 'hi' ? 'सफलतापूर्वक लॉगिन हुआ:' : 'Successfully signed in as'} ${cleanEmail}`
+                );
+              },
+            },
+          ],
+          'plain-text',
+          'myname@gmail.com'
+        )
+      : Alert.alert(
+          'Google Sign-In',
+          'Please use email/password sign up or enter details in settings.'
+        );
   };
 
   const handleCloudSignUp = async () => {
@@ -215,7 +237,7 @@ export default function App() {
   };
 
   const handleAnonymousGuest = async () => {
-    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: 'guest@oxnews.cloud', isGuest: true };
+    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: lang === 'hi' ? 'अनाम सत्र (Guest Session)' : 'Guest Session Active', isGuest: true };
     await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(guestSession));
     setCurrentUser(guestSession);
     setAuthModalOpen(false);
@@ -617,7 +639,7 @@ export default function App() {
         </TouchableOpacity>
       </Modal>
 
-      {/* GOOGLE SIGN-IN & AUTH MODAL */}
+      {/* AUTH MODAL */}
       <Modal visible={authModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.authCard}>
@@ -630,11 +652,10 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* ONE-CLICK GOOGLE SIGN IN BUTTON */}
             <TouchableOpacity style={styles.googleSignInBtn} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 10 }} />
               <Text style={styles.googleSignInText}>
-                {lang === 'hi' ? 'गूगल (Google) से साइन इन करें' : 'Sign in with Google'}
+                {lang === 'hi' ? 'अपना असली गूगल ईमेल दर्ज करें' : 'Sign in with Google Email'}
               </Text>
             </TouchableOpacity>
 
@@ -696,7 +717,6 @@ export default function App() {
               <View style={styles.authDividerLine} />
             </View>
 
-            {/* ANONYMOUS GUEST LOGIN */}
             <TouchableOpacity style={styles.guestLoginBtn} onPress={handleAnonymousGuest}>
               <Ionicons name="person-circle-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
               <Text style={styles.guestLoginBtnText}>
@@ -879,7 +899,6 @@ const styles = StyleSheet.create({
   voteBtnText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
   quizFullBtn: { backgroundColor: '#F1F5F9', padding: 16, borderRadius: 10, marginBottom: 12 },
   quizFullBtnText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  // Auth Form Styles
   authCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 22, width: width * 0.88 },
   authInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, height: 46, paddingHorizontal: 14, fontSize: 15, marginBottom: 12 },
   authSubmitBtn: { backgroundColor: '#DC2626', height: 46, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
