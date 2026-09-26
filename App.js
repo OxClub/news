@@ -16,6 +16,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width, height } = Dimensions.get('window');
@@ -24,45 +25,49 @@ const STRINGS = {
   en: {
     title: 'THE OX NEWS',
     mustRead: 'MUST READ',
-    ticker: 'Asian Games Medal Tally: India hits record medals in key athletics & kabaddi.',
+    ticker: 'Cyber Security Alert: New financial malware targeting Indian banking portals.',
     sectionsTitle: 'SECTIONS',
-    shortcuts: 'YOUR SHORTCUTS',
+    shortcuts: 'STATE & CITIES',
     bookmarks: 'Bookmarks',
     epaper: 'ePaper',
     talkToUs: 'Talk to us',
-    changeCity: 'No, Change City',
-    isThisCity: 'Is this your city?',
+    changeCity: 'Select State / City',
+    isThisCity: 'Current Location:',
     subscribe: 'SUBSCRIBE',
     marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
     close: 'Close',
     back: 'Back',
-    admobNotice: 'AdMob Test Banner (ca-app-pub-3940256099942544/6300978111)',
-    tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
-    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Technology', Science: 'Science' },
+    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
+    tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'States', explore: 'Explore', exclusives: 'Cyber Sec' },
+    cats: { India: 'India', CyberSec: 'Cyber Security', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Tech', Science: 'Science' },
   },
   hi: {
     title: 'द ऑक्स न्यूज़',
     mustRead: 'ज़रूर पढ़ें',
-    ticker: 'एशियाई खेल पदक तालिका: भारत ने कबड्डी और एथलेटिक्स में ऐतिहासिक पदक जीते।',
+    ticker: 'साइबर सुरक्षा चेतावनी: भारतीय बैंकिंग पोर्टल्स को निशाना बनाने वाला नया मैलवेयर पकड़ा गया।',
     sectionsTitle: 'प्रमुख श्रेणियां',
-    shortcuts: 'शॉर्टकट',
+    shortcuts: 'राज्य एवं शहर',
     bookmarks: 'सहेजे गए समाचार',
     epaper: 'ई-पेपर',
     talkToUs: 'हमसे संपर्क करें',
-    changeCity: 'शहर बदलें',
-    isThisCity: 'क्या यह आपका शहर है?',
+    changeCity: 'राज्य/शहर बदलें',
+    isThisCity: 'वर्तमान क्षेत्र:',
     subscribe: 'सब्सक्राइब',
     marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
     close: 'बंद करें',
     back: 'वापस जाएं',
-    admobNotice: 'AdMob Test Banner (ca-app-pub-3940256099942544/6300978111)',
-    tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'खास खबरें' },
-    cats: { India: 'भारत', World: 'विदेश', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
+    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
+    tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'राज्य', explore: 'एक्सप्लोर', exclusives: 'साइबर सुरक्षा' },
+    cats: { India: 'भारत', CyberSec: 'साइबर सुरक्षा', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
   },
 };
 
-const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Technology', 'Science'];
-const CITIES = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad'];
+const SECTIONS = ['India', 'CyberSec', 'Sports', 'Entertainment', 'Business', 'Technology', 'Science'];
+const INDIAN_STATES_CITIES = [
+  'Delhi', 'Uttar Pradesh', 'Bihar', 'Jharkhand', 'Madhya Pradesh', 
+  'Maharashtra', 'Rajasthan', 'Punjab', 'Haryana', 'West Bengal', 
+  'Karnataka', 'Tamil Nadu', 'Gujarat', 'Kerala', 'Odisha'
+];
 
 export default function App() {
   const [lang, setLang] = useState('hi');
@@ -70,21 +75,21 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
-  const [selectedCity, setSelectedCity] = useState('Delhi');
+  const [selectedLocation, setSelectedLocation] = useState('Bihar');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // In-App Article Viewer Modal
-  const [readerModal, setReaderModal] = useState({ visible: false, article: null });
+  // WebView In-App Reader Modal
+  const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
 
-  // Full Screen Feature Modals
-  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null); // 'astrology', 'epaper', 'awards', 'quiz', 'aiq', 'video'
+  // Feature Screens
+  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null); // 'astrology', 'epaper', 'awards', 'quiz', 'aiq'
 
-  // Standard Menus
+  // Menus
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreModalOpen, setMoreModalOpen] = useState(false);
-  const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   // Bookmarks & Dismissals
   const [bookmarkedIds, setBookmarkedIds] = useState({});
@@ -94,9 +99,9 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Investing';
-      else if (activeTab === 'delhi') query = selectedCity;
-      else if (activeTab === 'exclusives') query = 'India';
+      if (activeTab === 'markets') query = 'Stock Market India Sensex';
+      else if (activeTab === 'delhi') query = selectedLocation + ' news';
+      else if (activeTab === 'exclusives') query = 'Cyber security hacking scam India';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -107,7 +112,7 @@ export default function App() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, activeCategory, selectedCity, lang]);
+  }, [activeTab, activeCategory, selectedLocation, lang]);
 
   useEffect(() => {
     loadFeed();
@@ -126,8 +131,10 @@ export default function App() {
     );
   };
 
-  const openInAppArticle = (article) => {
-    setReaderModal({ visible: true, article });
+  const openFullArticle = (article) => {
+    if (article.url) {
+      setWebViewModal({ visible: true, url: article.url, title: article.title });
+    }
   };
 
   const visibleArticles = articles.filter(a => !dismissedIds[a.id]);
@@ -157,13 +164,13 @@ export default function App() {
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            {/* Top Quick Utility Buttons */}
+            {/* Quick Action Buttons */}
             <View style={styles.quickServicesBar}>
               <TouchableOpacity style={styles.quickServiceItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
                 <View style={styles.quickIconCircle}>
-                  <MaterialCommunityIcons name="plus-box-outline" size={20} color="#9A3412" />
+                  <MaterialCommunityIcons name="shield-lock" size={20} color="#DC2626" />
                 </View>
-                <Text style={styles.quickServiceText}>OX+</Text>
+                <Text style={styles.quickServiceText}>CyberSec</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('quiz')}>
@@ -196,7 +203,7 @@ export default function App() {
             </View>
 
             {/* Must Read Ticker */}
-            <TouchableOpacity style={styles.tickerCard} onPress={() => setActiveFeatureScreen('awards')}>
+            <TouchableOpacity style={styles.tickerCard} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
               </View>
@@ -227,11 +234,11 @@ export default function App() {
           </>
         )}
 
-        {/* City Header */}
+        {/* States & Cities Header */}
         {activeTab === 'delhi' && (
           <View style={styles.citySelectorBanner}>
-            <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
-            <TouchableOpacity style={styles.changeCityBtn} onPress={() => setCityModalOpen(true)}>
+            <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedLocation}</Text></Text>
+            <TouchableOpacity style={styles.changeCityBtn} onPress={() => setLocationModalOpen(true)}>
               <Text style={styles.changeCityBtnText}>{t.changeCity}</Text>
             </TouchableOpacity>
           </View>
@@ -240,7 +247,7 @@ export default function App() {
         {/* Explore Categories Strip */}
         {activeTab === 'explore' && (
           <View style={styles.exploreFilterRow}>
-            {['All', 'Parenting', 'Investing', 'Technology', 'Science'].map((item) => (
+            {['All', 'CyberSec', 'Investing', 'Technology', 'Science'].map((item) => (
               <TouchableOpacity
                 key={item}
                 style={[styles.explorePill, activeCategory === item && styles.explorePillActive]}
@@ -269,66 +276,76 @@ export default function App() {
               const isLargeLead = index === 0;
               const isBookmarked = !!bookmarkedIds[item.id];
 
-              if (isLargeLead) {
-                return (
-                  <View style={styles.leadCard}>
-                    <View style={styles.metaRow}>
-                      <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
-                      <View style={styles.actionIconRow}>
-                        <TouchableOpacity style={{ marginRight: 14 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                          <Ionicons
-                            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                            size={18}
-                            color={isBookmarked ? '#DC2626' : '#64748B'}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
-                          <Ionicons name="close" size={19} color="#64748B" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <TouchableOpacity onPress={() => openInAppArticle(item)}>
-                      <Text style={styles.leadTitle}>{item.title}</Text>
-                      {item.image_url ? (
-                        <Image source={{ uri: item.image_url }} style={styles.leadImage} />
-                      ) : null}
-                    </TouchableOpacity>
-                  </View>
-                );
-              }
+              // Insert AdMob test banner after every 4 articles
+              const showInFeedAd = index > 0 && index % 4 === 0;
 
               return (
-                <View style={styles.compactCard}>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
-                    <View style={styles.actionIconRow}>
-                      <TouchableOpacity style={{ marginRight: 10 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                        <Ionicons
-                          name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                          size={17}
-                          color={isBookmarked ? '#DC2626' : '#64748B'}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
-                        <Ionicons name="close" size={17} color="#64748B" />
-                      </TouchableOpacity>
+                <View>
+                  {showInFeedAd && (
+                    <View style={styles.inFeedAdBox}>
+                      <View style={styles.adTagSmall}><Text style={styles.adTagSmallText}>Ad</Text></View>
+                      <Text style={styles.inFeedAdText}>AdMob Banner: ca-app-pub-3940256099942544/6300978111</Text>
                     </View>
-                  </View>
-                  <TouchableOpacity style={styles.compactRow} onPress={() => openInAppArticle(item)}>
-                    <View style={styles.compactTextCol}>
-                      <Text style={styles.compactTitle} numberOfLines={3}>
-                        {item.title}
-                      </Text>
-                    </View>
-                    {item.image_url ? (
-                      <Image source={{ uri: item.image_url }} style={styles.compactThumb} />
-                    ) : (
-                      <View style={[styles.compactThumb, styles.thumbPlaceholder]}>
-                        <Ionicons name="newspaper-outline" size={24} color="#CBD5E1" />
+                  )}
+
+                  {isLargeLead ? (
+                    <View style={styles.leadCard}>
+                      <View style={styles.metaRow}>
+                        <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
+                        <View style={styles.actionIconRow}>
+                          <TouchableOpacity style={{ marginRight: 14 }} onPress={() => toggleBookmark(item.id, item.title)}>
+                            <Ionicons
+                              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                              size={18}
+                              color={isBookmarked ? '#DC2626' : '#64748B'}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
+                            <Ionicons name="close" size={19} color="#64748B" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    )}
-                  </TouchableOpacity>
+
+                      <TouchableOpacity onPress={() => openFullArticle(item)}>
+                        <Text style={styles.leadTitle}>{item.title}</Text>
+                        {item.image_url ? (
+                          <Image source={{ uri: item.image_url }} style={styles.leadImage} />
+                        ) : null}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.compactCard}>
+                      <View style={styles.metaRow}>
+                        <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
+                        <View style={styles.actionIconRow}>
+                          <TouchableOpacity style={{ marginRight: 10 }} onPress={() => toggleBookmark(item.id, item.title)}>
+                            <Ionicons
+                              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                              size={17}
+                              color={isBookmarked ? '#DC2626' : '#64748B'}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
+                            <Ionicons name="close" size={17} color="#64748B" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <TouchableOpacity style={styles.compactRow} onPress={() => openFullArticle(item)}>
+                        <View style={styles.compactTextCol}>
+                          <Text style={styles.compactTitle} numberOfLines={3}>
+                            {item.title}
+                          </Text>
+                        </View>
+                        {item.image_url ? (
+                          <Image source={{ uri: item.image_url }} style={styles.compactThumb} />
+                        ) : (
+                          <View style={[styles.compactThumb, styles.thumbPlaceholder]}>
+                            <Ionicons name="newspaper-outline" size={24} color="#CBD5E1" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               );
             }}
@@ -336,11 +353,9 @@ export default function App() {
         )}
       </View>
 
-      {/* ADMOB TEST BANNER BAR */}
+      {/* ADMOB STICKY FOOTER TEST BANNER */}
       <View style={styles.admobBannerBar}>
-        <View style={styles.admobTag}>
-          <Text style={styles.admobTagText}>Ad</Text>
-        </View>
+        <View style={styles.admobTag}><Text style={styles.admobTagText}>Ad</Text></View>
         <Text style={styles.admobBannerText} numberOfLines={1}>{t.admobNotice}</Text>
       </View>
 
@@ -358,7 +373,7 @@ export default function App() {
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('delhi')}>
           <Ionicons name="location-outline" size={21} color={activeTab === 'delhi' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'delhi' && styles.tabLabelActive]}>{selectedCity}</Text>
+          <Text style={[styles.tabLabel, activeTab === 'delhi' && styles.tabLabelActive]}>{selectedLocation}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('explore')}>
@@ -366,61 +381,30 @@ export default function App() {
           <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>{t.tabs.explore}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('exclusives')}>
-          <MaterialCommunityIcons name="crown-outline" size={22} color={activeTab === 'exclusives' ? '#EAB308' : '#64748B'} />
+        <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
+          <MaterialCommunityIcons name="shield-lock" size={22} color={activeTab === 'exclusives' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>{t.tabs.exclusives}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* IN-APP ARTICLE READER MODAL (Browser bahar nahi jayega) */}
-      <Modal visible={readerModal.visible} animationType="slide">
+      {/* IN-APP MULTI-PAGE WEBVIEW READER */}
+      <Modal visible={webViewModal.visible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setReaderModal({ visible: false, article: null })} style={styles.readerBackBtn}>
+            <TouchableOpacity onPress={() => setWebViewModal({ visible: false, url: '', title: '' })} style={styles.readerBackBtn}>
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
               <Text style={styles.readerBackText}>{t.back}</Text>
             </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle} numberOfLines={1}>OX Reader</Text>
-            <TouchableOpacity onPress={() => readerModal.article && toggleBookmark(readerModal.article.id, readerModal.article.title)}>
-              <Ionicons name="bookmark-outline" size={22} color="#0F172A" />
-            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle} numberOfLines={1}>{webViewModal.title}</Text>
+            <View style={{ width: 30 }} />
           </View>
-
-          {readerModal.article && (
-            <ScrollView contentContainerStyle={styles.readerBody}>
-              <Text style={styles.readerCategoryTag}>{readerModal.article.source}</Text>
-              <Text style={styles.readerArticleTitle}>{readerModal.article.title}</Text>
-              <Text style={styles.readerDate}>{new Date().toDateString()} • OX Editorial Desk</Text>
-
-              {readerModal.article.image_url ? (
-                <Image source={{ uri: readerModal.article.image_url }} style={styles.readerBigImage} />
-              ) : null}
-
-              {/* IN-ARTICLE AD BANNER */}
-              <View style={styles.inArticleAdBox}>
-                <Text style={styles.inArticleAdTitle}>Google AdMob In-Feed Test Ad</Text>
-                <Text style={styles.inArticleAdSub}>Slot ID: ca-app-pub-3940256099942544/1033173712</Text>
-              </View>
-
-              <Text style={styles.readerParagraph}>
-                {readerModal.article.description || 'विस्तृत रिपोर्ट लोड हो रही है...'}
-              </Text>
-              <Text style={styles.readerParagraph}>
-                {lang === 'hi'
-                  ? 'इस घटनाक्रम के बाद संबंधित विभागों ने तत्काल समीक्षा बैठक बुलाई है। विशेषज्ञों का मानना है कि आने वाले दिनों में इसके महत्वपूर्ण परिणाम देखने को मिलेंगे। ज़मीनी स्तर पर जनता की प्रतिक्रिया भी काफी सकारात्मक देखी जा रही है।'
-                  : 'Officials have convened an urgent high-level strategic review following this development. Analysts indicate this policy will bear significant outcomes across market verticals over the next quarter.'}
-              </Text>
-              <Text style={styles.readerParagraph}>
-                {lang === 'hi'
-                  ? 'अधिकारियों के अनुसार, सभी आवश्यक कदम उठा लिए गए हैं और नागरिकों को हर संभव सहायता पहुंचाई जा रही है।'
-                  : 'According to authorized spokespersons, adequate measures are in place to ensure seamless facilitation.'}
-              </Text>
-            </ScrollView>
-          )}
+          {webViewModal.url ? (
+            <WebView source={{ uri: webViewModal.url }} startInLoadingState renderLoading={() => <ActivityIndicator size="large" color="#DC2626" style={{ flex: 1 }} />} />
+          ) : null}
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: RASHIFAL (HOROSCOPE) DETAIL SCREEN */}
+      {/* FULL FEATURE: COMPLETE 12 RASHIFAL SCREEN */}
       <Modal visible={activeFeatureScreen === 'astrology'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
           <View style={styles.readerHeader}>
@@ -428,20 +412,26 @@ export default function App() {
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
               <Text style={styles.readerBackText}>{t.back}</Text>
             </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'दैनिक राशिफल' : 'Daily Horoscope'}</Text>
+            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'संपूर्ण 12 राशियों का राशिफल' : 'Complete 12 Zodiac Horoscope'}</Text>
             <View style={{ width: 30 }} />
           </View>
           <ScrollView contentContainerStyle={{ padding: 16 }}>
             {[
-              { rashi: 'मेष (Aries)', desc: 'आज कार्यक्षेत्र में नए अवसर मिलेंगे। आर्थिक स्थिति मजबूत होगी।', color: '#EF4444' },
-              { rashi: 'वृषभ (Taurus)', desc: 'परिवार का सहयोग मिलेगा। लंबी यात्रा के योग बन रहे हैं।', color: '#F59E0B' },
-              { rashi: 'मिथुन (Gemini)', desc: 'व्यापार में लाभ होगा। स्वास्थ्य पर थोड़ा ध्यान दें।', color: '#10B981' },
-              { rashi: 'कर्क (Cancer)', desc: 'आत्मविश्वास में वृद्धि होगी। अटके हुए काम पूरे होंगे।', color: '#3B82F6' },
-              { rashi: 'सिंह (Leo)', desc: 'मान-सम्मान में वृद्धि होगी। पदोन्नति की संभावना है।', color: '#8B5CF6' },
-              { rashi: 'कन्या (Virgo)', desc: 'धन निवेश में समझदारी बरतें। मित्रों से सुखद भेंट होगी।', color: '#EC4899' },
+              { rashi: 'मेष (Aries)', desc: 'व्यापार में लाभ और करियर में नए उछाल के योग हैं। स्वास्थ्य उत्तम रहेगा।' },
+              { rashi: 'वृषभ (Taurus)', desc: 'धन लाभ के अवसर मिलेंगे। परिवार के साथ धार्मिक यात्रा हो सकती है।' },
+              { rashi: 'मिथुन (Gemini)', desc: 'विद्यार्थियों के लिए समय अनुकूल है। रुका हुआ धन वापस मिल सकता है।' },
+              { rashi: 'कर्क (Cancer)', desc: 'मानसिक शांति बनी रहेगी। सहकर्मियों का पूरा सहयोग प्राप्त होगा।' },
+              { rashi: 'सिंह (Leo)', desc: 'नेतृत्व क्षमता का विकास होगा। उच्च अधिकारियों से सराहना मिलेगी।' },
+              { rashi: 'कन्या (Virgo)', desc: 'निवेश में सावधानी बरतें। स्वास्थ्य को लेकर थोड़ी सतर्कता जरूरी है।' },
+              { rashi: 'तुला (Libra)', desc: 'दांपत्य जीवन में मधुरता आएगी। नए पार्टनरशिप की शुरुआत हो सकती है।' },
+              { rashi: 'वृश्चिक (Scorpio)', desc: 'विरोधी परास्त होंगे। कोर्ट-कचहरी के मामलों में सफलता मिलेगी।' },
+              { rashi: 'धनु (Sagittarius)', desc: 'भाग्य का पूरा साथ मिलेगा। उच्च शिक्षा के लिए विदेश यात्रा के योग हैं।' },
+              { rashi: 'मकर (Capricorn)', desc: 'भूमि या वाहन खरीदने के प्रबल योग बन रहे हैं। खर्चों पर नियंत्रण रखें।' },
+              { rashi: 'कुंभ (Aquarius)', desc: 'रचनात्मक कार्यों में रुचि बढ़ेगी। मित्रों के साथ बेहतरीन समय बीतेगा।' },
+              { rashi: 'मीन (Pisces)', desc: 'आध्यात्मिक झुकाव रहेगा। आर्थिक मामलों में समझदारी से निर्णय लें।' },
             ].map((item, idx) => (
               <View key={idx} style={styles.horoscopeCard}>
-                <View style={[styles.rashiBadge, { backgroundColor: item.color }]}>
+                <View style={styles.rashiBadge}>
                   <Text style={styles.rashiBadgeText}>{item.rashi}</Text>
                 </View>
                 <Text style={styles.horoscopeText}>{item.desc}</Text>
@@ -451,7 +441,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: E-PAPER SCREEN */}
+      {/* FULL FEATURE: E-PAPER */}
       <Modal visible={activeFeatureScreen === 'epaper'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
           <View style={styles.readerHeader}>
@@ -459,31 +449,23 @@ export default function App() {
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
               <Text style={styles.readerBackText}>{t.back}</Text>
             </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'ई-पेपर डिजिटल संस्करण' : 'OX ePaper Edition'}</Text>
+            <Text style={styles.readerHeaderTitle}>OX ePaper Digital Edition</Text>
             <View style={{ width: 30 }} />
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, alignItems: 'center' }}>
             <View style={styles.epaperFrontPage}>
               <Text style={styles.epaperMasthead}>THE OX NEWS</Text>
-              <Text style={styles.epaperSub}>{new Date().toDateString()} • National Edition • Page 1</Text>
+              <Text style={styles.epaperSub}>{new Date().toDateString()} • National & Cyber Edition</Text>
               <View style={styles.epaperDivider} />
-              <Text style={styles.epaperHeadline}>
-                {lang === 'hi' ? 'देशभर में डिजिटल क्रांति की नई उड़ान, नीतियों में बदलाव' : 'NATION LEAPS INTO NEW AI ERA WITH MULTI-BILLION MISSION'}
-              </Text>
-              <View style={styles.epaperMockImage}>
-                <Ionicons name="image-outline" size={48} color="#94A3B8" />
-              </View>
-              <Text style={styles.epaperBodyText}>
-                {lang === 'hi'
-                  ? 'आज के मुख्य संस्करण में पढ़ें: बजट 2026 के मुख्य प्रस्ताव, रक्षा क्षेत्र में आत्मनिर्भरता और शिक्षा नीति के नए आयाम...'
-                  : 'Inside this edition: 2026 budget proposals, semiconductor manufacturing expansion, and green energy investments...'}
-              </Text>
+              <Text style={styles.epaperHeadline}>INDIA STRENGTHENS CYBER DEFENSE FRAMEWORK ACROSS ALL STATES</Text>
+              <View style={styles.epaperMockImage}><Ionicons name="newspaper-outline" size={48} color="#94A3B8" /></View>
+              <Text style={styles.epaperBodyText}>Read complete local editions from Bihar, UP, Jharkhand, Delhi and more inside this digital broadsheet replica.</Text>
             </View>
           </ScrollView>
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: AWARDS 2026 */}
+      {/* FULL FEATURE: AWARDS */}
       <Modal visible={activeFeatureScreen === 'awards'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -495,27 +477,20 @@ export default function App() {
             <View style={{ width: 30 }} />
           </View>
           <ScrollView contentContainerStyle={{ padding: 16 }}>
-            {[
-              { cat: 'Best Tech Creator', name: 'Tech Insights India', votes: '14,290' },
-              { cat: 'Young Entrepreneur', name: 'Nexus Solar Energy', votes: '11,840' },
-              { cat: 'Investigative Journalism', name: 'Bharat Special Report', votes: '23,190' },
-            ].map((nom, i) => (
+            {['Best Cyber Security Initiative', 'Top Regional News Bureau', 'Digital Innovator of the Year'].map((nom, i) => (
               <View key={i} style={styles.awardCard}>
-                <Text style={styles.awardCat}>{nom.cat}</Text>
-                <Text style={styles.awardName}>{nom.name}</Text>
-                <View style={styles.awardVoteRow}>
-                  <Text style={styles.awardVotes}>Votes: {nom.votes}</Text>
-                  <TouchableOpacity style={styles.voteBtn} onPress={() => Alert.alert('Vote Counted', `Voted for ${nom.name}!`)}>
-                    <Text style={styles.voteBtnText}>Vote Now</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={styles.awardCat}>Category {i+1}</Text>
+                <Text style={styles.awardName}>{nom}</Text>
+                <TouchableOpacity style={styles.voteBtn} onPress={() => Alert.alert('Success', 'Vote submitted!')}>
+                  <Text style={styles.voteBtnText}>Vote Now</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
         </SafeAreaView>
       </Modal>
 
-      {/* FULL FEATURE: BRAIN QUIZ */}
+      {/* FULL FEATURE: QUIZ */}
       <Modal visible={activeFeatureScreen === 'quiz'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -523,46 +498,17 @@ export default function App() {
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
               <Text style={styles.readerBackText}>{t.back}</Text>
             </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>Daily Quiz Challenge</Text>
+            <Text style={styles.readerHeaderTitle}>Daily Tech & Cyber Quiz</Text>
             <View style={{ width: 30 }} />
           </View>
           <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 12 }}>
-              {lang === 'hi' ? 'प्रश्न: भारत का राष्ट्रीय खेल कौन सा माना जाता है?' : 'Question: What is traditionally celebrated as India national sport?'}
-            </Text>
-            {['Hockey / हॉकी', 'Cricket / क्रिकेट', 'Kabaddi / कबड्डी', 'Football / फुटबॉल'].map((ans, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.quizFullBtn}
-                onPress={() => Alert.alert(i === 0 ? 'Correct Answer! 🎉' : 'Incorrect!', i === 0 ? 'Hockey is historically celebrated.' : 'Try again tomorrow!')}
-              >
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 12 }}>What is Phishing in Cyber Security?</Text>
+            {['Fraudulent email scam', 'Water sport', 'Network cable type', 'CPU cooling method'].map((ans, i) => (
+              <TouchableOpacity key={i} style={styles.quizFullBtn} onPress={() => Alert.alert(i === 0 ? 'Correct! 🎉' : 'Incorrect!')}>
                 <Text style={styles.quizFullBtnText}>{ans}</Text>
               </TouchableOpacity>
             ))}
           </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* FULL FEATURE: AIQ TEST */}
-      <Modal visible={activeFeatureScreen === 'aiq'} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
-              <Ionicons name="arrow-back" size={24} color="#0F172A" />
-              <Text style={styles.readerBackText}>{t.back}</Text>
-            </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>AIQ Readiness Score</Text>
-            <View style={{ width: 30 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            <View style={styles.aiqScoreBadge}>
-              <Text style={styles.aiqScoreNumber}>88/100</Text>
-              <Text style={styles.aiqScoreLabel}>Advanced Digital Quotient</Text>
-            </View>
-            <Text style={{ fontSize: 16, lineHeight: 24, color: '#334155' }}>
-              Your tech assessment is in the top 10 percentile for reader analytics this week. You demonstrate high literacy in prompt architecture, neural systems, and financial tech.
-            </Text>
-          </ScrollView>
         </SafeAreaView>
       </Modal>
 
@@ -582,7 +528,7 @@ export default function App() {
                 { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('astrology'); } },
                 { title: lang === 'hi' ? 'ई-पेपर' : 'ePaper', icon: 'newspaper-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('epaper'); } },
                 { title: lang === 'hi' ? 'अवार्ड्स' : 'Awards', icon: 'trophy-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('awards'); } },
-                { title: lang === 'hi' ? 'क्विज़ गेम' : 'Quiz', icon: 'puzzle-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('quiz'); } },
+                { title: lang === 'hi' ? 'क्विज़' : 'Quiz', icon: 'puzzle-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('quiz'); } },
               ].map((item, idx) => (
                 <TouchableOpacity key={idx} style={styles.sheetGridItem} onPress={item.action}>
                   <View style={styles.quickIconCircle}>
@@ -602,59 +548,21 @@ export default function App() {
           <View style={styles.drawerContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.drawerProfileBox}>
-                <View style={styles.profileAvatar}>
-                  <Ionicons name="person" size={26} color="#FFF" />
-                </View>
-                <Text style={styles.drawerProfileText}>
-                  {lang === 'hi' ? 'अपनी पसंदीदा खबरें सहेजने के लिए साइन इन करें' : 'Sign in to sync your bookmarks'}
-                </Text>
-                <TouchableOpacity
-                  style={styles.signInBtn}
-                  onPress={() => Alert.alert('OX Account', 'You are signed in as Guest Reader.')}
-                >
-                  <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In  →'}</Text>
+                <View style={styles.profileAvatar}><Ionicons name="person" size={26} color="#FFF" /></View>
+                <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'प्रोफ़ाइल सिंक करें' : 'Sign in to sync bookmarks'}</Text>
+                <TouchableOpacity style={styles.signInBtn} onPress={() => Alert.alert('OX Account', 'Logged in successfully.')}>
+                  <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In →'}</Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
               {SECTIONS.map((sec) => (
-                <TouchableOpacity
-                  key={sec}
-                  style={styles.drawerRow}
-                  onPress={() => {
-                    setActiveCategory(sec);
-                    setDrawerOpen(false);
-                  }}
-                >
+                <TouchableOpacity key={sec} style={styles.drawerRow} onPress={() => { setActiveCategory(sec); setDrawerOpen(false); }}>
                   <Ionicons name="chevron-forward-outline" size={16} color="#64748B" style={{ width: 24 }} />
                   <Text style={styles.drawerRowText}>{t.cats[sec] || sec}</Text>
                 </TouchableOpacity>
               ))}
-
-              <View style={styles.drawerDivider} />
-              <Text style={styles.drawerSectionHeading}>{t.shortcuts}</Text>
-              <TouchableOpacity
-                style={styles.drawerRow}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  setActiveFeatureScreen('epaper');
-                }}
-              >
-                <Ionicons name="newspaper-outline" size={18} color="#334155" style={{ width: 26 }} />
-                <Text style={styles.drawerRowText}>{t.epaper}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.drawerRow}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  setActiveFeatureScreen('astrology');
-                }}
-              >
-                <Ionicons name="compass-outline" size={18} color="#334155" style={{ width: 26 }} />
-                <Text style={styles.drawerRowText}>{lang === 'hi' ? 'राशिफल' : 'Horoscope'}</Text>
-              </TouchableOpacity>
             </ScrollView>
-
             <TouchableOpacity style={styles.drawerCloseBtn} onPress={() => setDrawerOpen(false)}>
               <Ionicons name="close" size={20} color="#1E293B" />
               <Text style={{ marginLeft: 6, fontWeight: '700' }}>{t.close}</Text>
@@ -664,24 +572,27 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* CITY SELECTION MODAL */}
-      <Modal visible={cityModalOpen} transparent animationType="slide">
+      {/* STATES & CITIES SELECTION MODAL */}
+      <Modal visible={locationModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.citySheet}>
-            <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अपना शहर चुनें' : 'Select Your City'}</Text>
-            {CITIES.map((city) => (
-              <TouchableOpacity
-                key={city}
-                style={styles.cityOptionRow}
-                onPress={() => {
-                  setSelectedCity(city);
-                  setCityModalOpen(false);
-                }}
-              >
-                <Text style={[styles.cityOptionText, selectedCity === city && { color: '#DC2626', fontWeight: '800' }]}>{city}</Text>
-                {selectedCity === city && <Ionicons name="checkmark-circle" size={20} color="#DC2626" />}
-              </TouchableOpacity>
-            ))}
+            <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अपना राज्य / शहर चुनें' : 'Select State / City'}</Text>
+            <ScrollView style={{ maxHeight: 320 }}>
+              {INDIAN_STATES_CITIES.map((loc) => (
+                <TouchableOpacity
+                  key={loc}
+                  style={styles.cityOptionRow}
+                  onPress={() => {
+                    setSelectedLocation(loc);
+                    setLocationModalOpen(false);
+                    setActiveTab('delhi');
+                  }}
+                >
+                  <Text style={[styles.cityOptionText, selectedLocation === loc && { color: '#DC2626', fontWeight: '800' }]}>{loc}</Text>
+                  {selectedLocation === loc && <Ionicons name="checkmark-circle" size={20} color="#DC2626" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -716,11 +627,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 4,
   },
-  langSwitchText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  langSwitchText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
   quickServicesBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -797,6 +704,20 @@ const styles = StyleSheet.create({
   explorePillActive: { backgroundColor: '#0F172A' },
   explorePillText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
   explorePillTextActive: { color: '#FFFFFF' },
+  inFeedAdBox: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    padding: 10,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  adTagSmall: { backgroundColor: '#D97706', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: 8 },
+  adTagSmallText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
+  inFeedAdText: { fontSize: 11, color: '#78350F', fontFamily: 'monospace', flex: 1 },
   admobBannerBar: {
     backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
@@ -806,24 +727,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  admobTag: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  admobTagText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-  },
-  admobBannerText: {
-    fontSize: 11,
-    color: '#64748B',
-    flex: 1,
-    fontFamily: 'monospace',
-  },
+  admobTag: { backgroundColor: '#E2E8F0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: 8 },
+  admobTagText: { fontSize: 10, fontWeight: '800', color: '#64748B' },
+  admobBannerText: { fontSize: 11, color: '#64748B', flex: 1, fontFamily: 'monospace' },
   bottomBar: {
     height: 56,
     flexDirection: 'row',
@@ -836,7 +742,7 @@ const styles = StyleSheet.create({
   tabItem: { alignItems: 'center' },
   tabLabel: { fontSize: 10, marginTop: 2, color: '#64748B', fontWeight: '600' },
   tabLabelActive: { color: '#DC2626', fontWeight: '800' },
-  tabLabelExclusive: { color: '#CA8A04', fontWeight: '800' },
+  tabLabelExclusive: { color: '#DC2626', fontWeight: '800' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   bottomSheetCard: { backgroundColor: '#FFF8F5', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, width: '100%', position: 'absolute', bottom: 0 },
@@ -871,26 +777,9 @@ const styles = StyleSheet.create({
   },
   readerBackBtn: { flexDirection: 'row', alignItems: 'center' },
   readerBackText: { fontSize: 14, fontWeight: '700', marginLeft: 6, color: '#0F172A' },
-  readerHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  readerBody: { padding: 18 },
-  readerCategoryTag: { fontSize: 12, fontWeight: '800', color: '#DC2626', textTransform: 'uppercase', marginBottom: 6 },
-  readerArticleTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A', lineHeight: 30, marginBottom: 8 },
-  readerDate: { fontSize: 12, color: '#94A3B8', marginBottom: 16 },
-  readerBigImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 18, backgroundColor: '#F1F5F9' },
-  inArticleAdBox: {
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 16,
-    alignItems: 'center',
-  },
-  inArticleAdTitle: { fontSize: 13, fontWeight: '800', color: '#92400E' },
-  inArticleAdSub: { fontSize: 10, color: '#B45309', marginTop: 2, fontFamily: 'monospace' },
-  readerParagraph: { fontSize: 16, lineHeight: 26, color: '#334155', marginBottom: 16 },
+  readerHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center', marginHorizontal: 12 },
   horoscopeCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 1 },
-  rashiBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
+  rashiBadge: { alignSelf: 'flex-start', backgroundColor: '#DC2626', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
   rashiBadgeText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
   horoscopeText: { fontSize: 14, color: '#475569', lineHeight: 22 },
   epaperFrontPage: { backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, width: '100%', elevation: 2 },
@@ -903,13 +792,8 @@ const styles = StyleSheet.create({
   awardCard: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   awardCat: { fontSize: 12, fontWeight: '800', color: '#DC2626', textTransform: 'uppercase' },
   awardName: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginVertical: 4 },
-  awardVoteRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  awardVotes: { fontSize: 13, color: '#64748B', fontWeight: '600' },
-  voteBtn: { backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
+  voteBtn: { backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start', marginTop: 8 },
   voteBtnText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
   quizFullBtn: { backgroundColor: '#F1F5F9', padding: 16, borderRadius: 10, marginBottom: 12 },
   quizFullBtnText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  aiqScoreBadge: { backgroundColor: '#EFF6FF', padding: 24, borderRadius: 16, alignItems: 'center', marginBottom: 20 },
-  aiqScoreNumber: { fontSize: 44, fontWeight: '900', color: '#2563EB' },
-  aiqScoreLabel: { fontSize: 14, fontWeight: '700', color: '#1D4ED8', marginTop: 4 },
 });
