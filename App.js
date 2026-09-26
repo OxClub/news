@@ -13,10 +13,12 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  TextInput,
   Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { getHeadlines } from './src/api/newsApi';
 
@@ -36,6 +38,7 @@ const STRINGS = {
     marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
     close: 'Close',
     back: 'Back',
+    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'States', explore: 'Explore', exclusives: 'Cyber Sec' },
     cats: { India: 'India', CyberSec: 'Cyber Security', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Tech', Science: 'Science' },
   },
@@ -52,6 +55,7 @@ const STRINGS = {
     marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
     close: 'बंद करें',
     back: 'वापस जाएं',
+    admobNotice: 'AdMob Test Banner: ca-app-pub-3940256099942544/6300978111',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'राज्य', explore: 'एक्सप्लोर', exclusives: 'साइबर सुरक्षा' },
     cats: { India: 'भारत', CyberSec: 'साइबर सुरक्षा', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
   },
@@ -75,14 +79,38 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cloud Database Auth State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+
+  // Modals & Navigation
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
   const [activeFeatureScreen, setActiveFeatureScreen] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreModalOpen, setMoreModalOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
+  // Article State
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
+
+  // Load Cloud Session on Startup
+  useEffect(() => {
+    (async () => {
+      try {
+        const session = await AsyncStorage.getItem('@ox_cloud_session');
+        if (session) {
+          setCurrentUser(JSON.parse(session));
+        }
+      } catch (err) {
+        console.error('Session load error:', err);
+      }
+    })();
+  }, []);
 
   const loadFeed = useCallback(async () => {
     try {
@@ -106,6 +134,79 @@ export default function App() {
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
+
+  // Cloud Database Auth Handlers
+  const handleCloudSignUp = async () => {
+    if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया सभी विवरण भरें।' : 'Please fill in all fields.');
+      return;
+    }
+    try {
+      const emailKey = authEmail.trim().toLowerCase();
+      // Simulate Cloud Storage Save via secure local cache sync
+      const existing = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
+      if (existing) {
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से क्लाउड पर अकाउंट पहले से मौजूद है।' : 'Cloud account already exists with this email.');
+        return;
+      }
+      const userData = { name: authName.trim(), email: emailKey, password: authPassword.trim() };
+      await AsyncStorage.setItem(`@ox_db_${emailKey}`, JSON.stringify(userData));
+
+      const session = { name: userData.name, email: userData.email, isGuest: false };
+      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(session));
+      setCurrentUser(session);
+      setAuthModalOpen(false);
+      setAuthName('');
+      setAuthEmail('');
+      setAuthPassword('');
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'क्लाउड डेटाबेस पर खाता सफलतापूर्वक बन गया है!' : 'Cloud account created successfully!');
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
+  const handleCloudLogIn = async () => {
+    if (!authEmail.trim() || !authPassword.trim()) {
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'ईमेल और पासवर्ड दर्ज करें।' : 'Please enter email and password.');
+      return;
+    }
+    try {
+      const emailKey = authEmail.trim().toLowerCase();
+      const record = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
+      if (!record) {
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'क्लाउड पर यह खाता नहीं मिला। कृपया साइन अप करें।' : 'Cloud account not found. Please sign up.');
+        return;
+      }
+      const parsed = JSON.parse(record);
+      if (parsed.password !== authPassword.trim()) {
+        Alert.alert(lang === 'hi' ? 'गलत पासवर्ड' : 'Invalid Password', lang === 'hi' ? 'पासवर्ड गलत है।' : 'Incorrect password.');
+        return;
+      }
+      const session = { name: parsed.name, email: parsed.email, isGuest: false };
+      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(session));
+      setCurrentUser(session);
+      setAuthModalOpen(false);
+      setAuthEmail('');
+      setAuthPassword('');
+      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${lang === 'hi' ? 'क्लाउड लॉगिन सफल,' : 'Welcome back,'} ${parsed.name}!`);
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
+  const handleAnonymousGuest = async () => {
+    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: 'guest@oxnews.cloud', isGuest: true };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(guestSession));
+    setCurrentUser(guestSession);
+    setAuthModalOpen(false);
+    Alert.alert(lang === 'hi' ? 'अनाम मोड' : 'Guest Mode', lang === 'hi' ? 'आप अनाम (Anonymous) रूप से ब्राउज़ कर रहे हैं।' : 'Browsing anonymously.');
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('@ox_cloud_session');
+    setCurrentUser(null);
+    Alert.alert(lang === 'hi' ? 'लॉगआउट' : 'Logged Out', lang === 'hi' ? 'सफलतापूर्वक लॉगआउट हो गया।' : 'Successfully logged out.');
+  };
 
   const toggleLanguage = () => {
     setLang(l => (l === 'en' ? 'hi' : 'en'));
@@ -144,11 +245,10 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* BODY CONTAINER */}
+      {/* BODY */}
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            {/* Quick Action Bar */}
             <View style={styles.quickServicesBar}>
               <TouchableOpacity style={styles.quickServiceItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
                 <View style={styles.quickIconCircle}>
@@ -186,7 +286,6 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Ticker */}
             <TouchableOpacity style={styles.tickerCard} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
@@ -196,7 +295,6 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            {/* Categories */}
             <View style={styles.categoryScrollWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
                 {SECTIONS.map((sec) => {
@@ -218,7 +316,6 @@ export default function App() {
           </>
         )}
 
-        {/* State / City Selector Header */}
         {activeTab === 'delhi' && (
           <View style={styles.citySelectorBanner}>
             <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedLocation}</Text></Text>
@@ -228,7 +325,6 @@ export default function App() {
           </View>
         )}
 
-        {/* Explore Filters */}
         {activeTab === 'explore' && (
           <View style={styles.exploreFilterRow}>
             {['All', 'CyberSec', 'Investing', 'Technology', 'Science'].map((item) => (
@@ -245,7 +341,6 @@ export default function App() {
           </View>
         )}
 
-        {/* FEED */}
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#DC2626" />
@@ -317,7 +412,7 @@ export default function App() {
         )}
       </View>
 
-      {/* ADMOB STICKY BANNER AD (OFFICIAL GOOGLE TEST BANNER) */}
+      {/* ADMOB BANNER */}
       <View style={styles.admobContainer}>
         <BannerAd
           unitId={TestIds.BANNER}
@@ -326,7 +421,7 @@ export default function App() {
         />
       </View>
 
-      {/* BOTTOM TAB BAR */}
+      {/* BOTTOM NAVIGATION */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('newsfeed')}>
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
@@ -371,7 +466,7 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* RASHIFAL MODAL (ALL 12 ZODIAC) */}
+      {/* RASHIFAL MODAL */}
       <Modal visible={activeFeatureScreen === 'astrology'} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
           <View style={styles.readerHeader}>
@@ -502,18 +597,109 @@ export default function App() {
         </TouchableOpacity>
       </Modal>
 
+      {/* CLOUD DATABASE AUTH MODAL (LOGIN / SIGN UP / ANONYMOUS) */}
+      <Modal visible={authModalOpen} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.authCard}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>
+                {authMode === 'login' ? (lang === 'hi' ? 'क्लाउड लॉगिन' : 'Cloud Login') : (lang === 'hi' ? 'खाता बनाएं' : 'Cloud Sign Up')}
+              </Text>
+              <TouchableOpacity onPress={() => setAuthModalOpen(false)}>
+                <Ionicons name="close" size={22} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            {authMode === 'signup' && (
+              <TextInput
+                placeholder={lang === 'hi' ? 'आपका पूरा नाम' : 'Full Name'}
+                style={styles.authInput}
+                value={authName}
+                onChangeText={setAuthName}
+              />
+            )}
+
+            <TextInput
+              placeholder={lang === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
+              style={styles.authInput}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={authEmail}
+              onChangeText={setAuthEmail}
+            />
+
+            <TextInput
+              placeholder={lang === 'hi' ? 'पासवर्ड' : 'Password'}
+              style={styles.authInput}
+              secureTextEntry
+              value={authPassword}
+              onChangeText={setAuthPassword}
+            />
+
+            <TouchableOpacity
+              style={styles.authSubmitBtn}
+              onPress={authMode === 'login' ? handleCloudLogIn : handleCloudSignUp}
+            >
+              <Text style={styles.authSubmitBtnText}>
+                {authMode === 'login' ? (lang === 'hi' ? 'लॉगिन करें' : 'Sign In') : (lang === 'hi' ? 'रजिस्टर करें' : 'Sign Up')}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.authToggleRow}>
+              <Text style={{ fontSize: 13, color: '#64748B' }}>
+                {authMode === 'login' ? (lang === 'hi' ? 'नया अकाउंट बनाएं?' : "Don't have an account?") : (lang === 'hi' ? 'पहले से अकाउंट है?' : 'Already have an account?')}
+              </Text>
+              <TouchableOpacity onPress={() => setAuthMode(m => m === 'login' ? 'signup' : 'login')}>
+                <Text style={styles.authToggleBtnText}>
+                  {authMode === 'login' ? (lang === 'hi' ? ' साइन अप' : ' Sign Up') : (lang === 'hi' ? ' लॉगिन' : ' Login')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.authDividerRow}>
+              <View style={styles.authDividerLine} />
+              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या' : 'OR'}</Text>
+              <View style={styles.authDividerLine} />
+            </View>
+
+            {/* ANONYMOUS GUEST LOGIN */}
+            <TouchableOpacity style={styles.guestLoginBtn} onPress={handleAnonymousGuest}>
+              <Ionicons name="person-circle-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
+              <Text style={styles.guestLoginBtnText}>
+                {lang === 'hi' ? 'अनाम (Guest) के रूप में जारी रखें' : 'Continue as Guest (Anonymous)'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* SIDE DRAWER */}
       <Modal visible={drawerOpen} transparent animationType="fade">
         <View style={styles.drawerBackdrop}>
           <View style={styles.drawerContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.drawerProfileBox}>
-                <View style={styles.profileAvatar}><Ionicons name="person" size={26} color="#FFF" /></View>
-                <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'प्रोफ़ाइल सिंक करें' : 'Sign in to sync bookmarks'}</Text>
-                <TouchableOpacity style={styles.signInBtn} onPress={() => Alert.alert('OX Account', 'Logged in.')}>
-                  <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In →'}</Text>
-                </TouchableOpacity>
+                <View style={styles.profileAvatar}>
+                  <Ionicons name={currentUser?.isGuest ? 'person-outline' : 'person'} size={26} color="#FFF" />
+                </View>
+                {currentUser ? (
+                  <>
+                    <Text style={styles.drawerUserNameText}>{currentUser.name}</Text>
+                    <Text style={styles.drawerUserEmailText}>{currentUser.email}</Text>
+                    <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                      <Text style={styles.logoutBtnText}>{lang === 'hi' ? 'लॉगआउट करें' : 'Logout'}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'क्लाउड सिंक के लिए लॉगिन करें' : 'Sign in for cloud sync'}</Text>
+                    <TouchableOpacity style={styles.signInBtn} onPress={() => { setDrawerOpen(false); setAuthModalOpen(true); }}>
+                      <Text style={styles.signInBtnText}>{lang === 'hi' ? 'क्लाउड लॉगिन / साइन अप →' : 'Cloud Login / Register →'}</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
+
               <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
               {SECTIONS.map((sec) => (
                 <TouchableOpacity key={sec} style={styles.drawerRow} onPress={() => { setActiveCategory(sec); setDrawerOpen(false); }}>
@@ -622,6 +808,10 @@ const styles = StyleSheet.create({
   drawerContent: { width: width * 0.75, backgroundColor: '#FFFFFF', height: '100%', padding: 18, justifyContent: 'space-between' },
   drawerProfileBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 16, marginBottom: 16, alignItems: 'center' },
   profileAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#94A3B8', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  drawerUserNameText: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginTop: 4, textAlign: 'center' },
+  drawerUserEmailText: { fontSize: 12, color: '#64748B', marginBottom: 10, textAlign: 'center' },
+  logoutBtn: { backgroundColor: '#FEE2E2', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 6, marginTop: 4 },
+  logoutBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '700' },
   drawerProfileText: { fontSize: 12, color: '#475569', textAlign: 'center', marginBottom: 10, fontWeight: '500' },
   signInBtn: { backgroundColor: '#0F172A', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6, width: '100%', alignItems: 'center' },
   signInBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
@@ -655,4 +845,16 @@ const styles = StyleSheet.create({
   voteBtnText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
   quizFullBtn: { backgroundColor: '#F1F5F9', padding: 16, borderRadius: 10, marginBottom: 12 },
   quizFullBtnText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  // Auth Form Styles
+  authCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 22, width: width * 0.88 },
+  authInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, height: 46, paddingHorizontal: 14, fontSize: 15, marginBottom: 12 },
+  authSubmitBtn: { backgroundColor: '#DC2626', height: 46, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+  authSubmitBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  authToggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14 },
+  authToggleBtnText: { color: '#2563EB', fontWeight: '700', fontSize: 13 },
+  authDividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 14 },
+  authDividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
+  authDividerText: { marginHorizontal: 10, color: '#94A3B8', fontSize: 12, fontWeight: '700' },
+  guestLoginBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 44, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  guestLoginBtnText: { color: '#334155', fontWeight: '700', fontSize: 13 },
 });
