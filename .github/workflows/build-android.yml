@@ -28,9 +28,26 @@ jobs:
         run: |
           npm install --legacy-peer-deps
           npm list expo || npm install expo@~51.0.0
+          npm install sharp-cli -g
+
+      - name: Rasterize High-Res PNG Icons from SVG
+        run: |
+          sharp -i assets/icon.svg -o assets/icon.png resize 512 512
+          sharp -i assets/icon.svg -o assets/adaptive-icon.png resize 512 512
+          sharp -i assets/icon.svg -o assets/splash-icon.png resize 512 512
 
       - name: Prebuild Native Android Directory
         run: npx expo prebuild --platform android --clean
+
+      - name: Bundle Latest JavaScript Assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res/
 
       - name: Setup Keystore from Secret
         run: |
@@ -63,7 +80,7 @@ jobs:
       - name: Build Standalone Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew clean assembleRelease --no-daemon
 
       - name: Build Play Store Production AAB
         run: |
@@ -73,13 +90,13 @@ jobs:
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: NewsPulse-Release-APK
+          name: OXNews-Release-APK
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 14
 
       - name: Upload Google Play AAB
         uses: actions/upload-artifact@v4
         with:
-          name: NewsPulse-PlayStore-AAB
+          name: OXNews-PlayStore-AAB
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 14

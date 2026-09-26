@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#0B0F19"/>
+  <!-- Cyber Corner Reticles -->
+  <path d="M90 130 H130 V90" stroke="#00FF9D" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <path d="M382 90 V130 H422" stroke="#00FF9D" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <path d="M90 382 H130 V422" stroke="#00FF9D" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <path d="M382 422 V382 H422" stroke="#00FF9D" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <!-- Outer Hexagon -->
+  <polygon points="256,80 405,166 405,346 256,432 107,346 107,166" fill="none" stroke="#00FF9D" stroke-width="8"/>
+  <!-- Inner Hexagon -->
+  <polygon points="256,112 377,182 377,330 256,400 135,330 135,182" fill="none" stroke="#00FF9D" stroke-width="4" opacity="0.45"/>
+  <!-- Centered 0X Typography -->
+  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="monospace, sans-serif" font-weight="900" font-size="124" fill="#FFFFFF" letter-spacing="4">0X</text>
+  <!-- Cyber Accent Underline -->
+  <line x1="200" y1="334" x2="312" y2="334" stroke="#00FF9D" stroke-width="10" stroke-linecap="round"/>
+</svg>
