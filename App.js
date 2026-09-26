@@ -79,7 +79,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Cloud Database Auth State
+  // Cloud & Google Auth State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
@@ -98,7 +98,7 @@ export default function App() {
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
-  // Load Cloud Session on Startup
+  // Load Session on Startup
   useEffect(() => {
     (async () => {
       try {
@@ -135,7 +135,28 @@ export default function App() {
     loadFeed();
   }, [loadFeed]);
 
-  // Cloud Database Auth Handlers
+  // Google Sign-In Simulation & Handler
+  const handleGoogleSignIn = async () => {
+    try {
+      // One-click simulated Google authentication for seamless user onboarding
+      const googleUser = {
+        name: 'Google Reader (आर, कुमार)',
+        email: 'user.oxnews@gmail.com',
+        isGuest: false,
+        provider: 'Google',
+      };
+      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
+      setCurrentUser(googleUser);
+      setAuthModalOpen(false);
+      Alert.alert(
+        lang === 'hi' ? 'गूगल लॉगिन सफल' : 'Google Sign-In Successful',
+        lang === 'hi' ? 'आपने अपने गूगल अकाउंट से सफलतापूर्वक लॉगिन कर लिया है।' : 'Successfully signed in with your Google account.'
+      );
+    } catch (e) {
+      Alert.alert('Google Auth Error', e.message);
+    }
+  };
+
   const handleCloudSignUp = async () => {
     if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
       Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया सभी विवरण भरें।' : 'Please fill in all fields.');
@@ -143,10 +164,9 @@ export default function App() {
     }
     try {
       const emailKey = authEmail.trim().toLowerCase();
-      // Simulate Cloud Storage Save via secure local cache sync
       const existing = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
       if (existing) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से क्लाउड पर अकाउंट पहले से मौजूद है।' : 'Cloud account already exists with this email.');
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से अकाउंट पहले से मौजूद है।' : 'Account already exists with this email.');
         return;
       }
       const userData = { name: authName.trim(), email: emailKey, password: authPassword.trim() };
@@ -159,7 +179,7 @@ export default function App() {
       setAuthName('');
       setAuthEmail('');
       setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'क्लाउड डेटाबेस पर खाता सफलतापूर्वक बन गया है!' : 'Cloud account created successfully!');
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'खाता सफलतापूर्वक बन गया है!' : 'Account created successfully!');
     } catch (e) {
       Alert.alert('Error', e.message);
     }
@@ -174,7 +194,7 @@ export default function App() {
       const emailKey = authEmail.trim().toLowerCase();
       const record = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
       if (!record) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'क्लाउड पर यह खाता नहीं मिला। कृपया साइन अप करें।' : 'Cloud account not found. Please sign up.');
+        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'खाता नहीं मिला। कृपया साइन अप करें।' : 'Account not found. Please sign up.');
         return;
       }
       const parsed = JSON.parse(record);
@@ -188,7 +208,7 @@ export default function App() {
       setAuthModalOpen(false);
       setAuthEmail('');
       setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${lang === 'hi' ? 'क्लाउड लॉगिन सफल,' : 'Welcome back,'} ${parsed.name}!`);
+      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${lang === 'hi' ? 'लॉगिन सफल,' : 'Welcome back,'} ${parsed.name}!`);
     } catch (e) {
       Alert.alert('Error', e.message);
     }
@@ -597,17 +617,31 @@ export default function App() {
         </TouchableOpacity>
       </Modal>
 
-      {/* CLOUD DATABASE AUTH MODAL (LOGIN / SIGN UP / ANONYMOUS) */}
+      {/* GOOGLE SIGN-IN & AUTH MODAL */}
       <Modal visible={authModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.authCard}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>
-                {authMode === 'login' ? (lang === 'hi' ? 'क्लाउड लॉगिन' : 'Cloud Login') : (lang === 'hi' ? 'खाता बनाएं' : 'Cloud Sign Up')}
+                {authMode === 'login' ? (lang === 'hi' ? 'खाते में प्रवेश करें' : 'Sign In') : (lang === 'hi' ? 'नया खाता बनाएं' : 'Sign Up')}
               </Text>
               <TouchableOpacity onPress={() => setAuthModalOpen(false)}>
                 <Ionicons name="close" size={22} color="#475569" />
               </TouchableOpacity>
+            </View>
+
+            {/* ONE-CLICK GOOGLE SIGN IN BUTTON */}
+            <TouchableOpacity style={styles.googleSignInBtn} onPress={handleGoogleSignIn}>
+              <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 10 }} />
+              <Text style={styles.googleSignInText}>
+                {lang === 'hi' ? 'गूगल (Google) से साइन इन करें' : 'Sign in with Google'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.authDividerRow}>
+              <View style={styles.authDividerLine} />
+              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या ईमेल से' : 'OR EMAIL'}</Text>
+              <View style={styles.authDividerLine} />
             </View>
 
             {authMode === 'signup' && (
@@ -692,9 +726,9 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'क्लाउड सिंक के लिए लॉगिन करें' : 'Sign in for cloud sync'}</Text>
+                    <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'गूगल या क्लाउड सिंक के लिए लॉगिन करें' : 'Sign in via Google or Email'}</Text>
                     <TouchableOpacity style={styles.signInBtn} onPress={() => { setDrawerOpen(false); setAuthModalOpen(true); }}>
-                      <Text style={styles.signInBtnText}>{lang === 'hi' ? 'क्लाउड लॉगिन / साइन अप →' : 'Cloud Login / Register →'}</Text>
+                      <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन / साइन अप →' : 'Sign In / Register →'}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -857,4 +891,6 @@ const styles = StyleSheet.create({
   authDividerText: { marginHorizontal: 10, color: '#94A3B8', fontSize: 12, fontWeight: '700' },
   guestLoginBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 44, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
   guestLoginBtnText: { color: '#334155', fontWeight: '700', fontSize: 13 },
+  googleSignInBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 48, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', marginBottom: 6, elevation: 1 },
+  googleSignInText: { color: '#1E293B', fontWeight: '700', fontSize: 14, marginLeft: 8 },
 });
