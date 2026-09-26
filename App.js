@@ -13,14 +13,12 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
-  TextInput,
   Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import { getHeadlines } from './src/api/newsApi';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const STRINGS = {
   en: {
@@ -37,7 +35,8 @@ const STRINGS = {
     subscribe: 'SUBSCRIBE',
     marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
     close: 'Close',
-    submit: 'Submit',
+    back: 'Back',
+    admobNotice: 'AdMob Test Banner (ca-app-pub-3940256099942544/6300978111)',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
     cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Technology', Science: 'Science' },
   },
@@ -55,7 +54,8 @@ const STRINGS = {
     subscribe: 'सब्सक्राइब',
     marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
     close: 'बंद करें',
-    submit: 'जमा करें',
+    back: 'वापस जाएं',
+    admobNotice: 'AdMob Test Banner (ca-app-pub-3940256099942544/6300978111)',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'खास खबरें' },
     cats: { India: 'भारत', World: 'विदेश', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
   },
@@ -65,7 +65,7 @@ const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Tech
 const CITIES = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad'];
 
 export default function App() {
-  const [lang, setLang] = useState('en');
+  const [lang, setLang] = useState('hi');
   const t = STRINGS[lang];
 
   const [activeTab, setActiveTab] = useState('newsfeed');
@@ -75,19 +75,16 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Modals
+  // In-App Article Viewer Modal
+  const [readerModal, setReaderModal] = useState({ visible: false, article: null });
+
+  // Full Screen Feature Modals
+  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null); // 'astrology', 'epaper', 'awards', 'quiz', 'aiq', 'video'
+
+  // Standard Menus
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreModalOpen, setMoreModalOpen] = useState(false);
   const [cityModalOpen, setCityModalOpen] = useState(false);
-  const [gameModalOpen, setGameModalOpen] = useState(false);
-  const [aiqModalOpen, setAiqModalOpen] = useState(false);
-  const [awardsModalOpen, setAwardsModalOpen] = useState(false);
-  const [featureModal, setFeatureModal] = useState({ visible: false, title: '', content: '' });
-
-  // Quiz State for Games
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizStep, setQuizStep] = useState(0);
-  const [quizAnswered, setQuizAnswered] = useState(false);
 
   // Bookmarks & Dismissals
   const [bookmarkedIds, setBookmarkedIds] = useState({});
@@ -103,7 +100,7 @@ export default function App() {
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
-      setArticles(data);
+      setArticles(data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -117,8 +114,7 @@ export default function App() {
   }, [loadFeed]);
 
   const toggleLanguage = () => {
-    const nextLang = lang === 'en' ? 'hi' : 'en';
-    setLang(nextLang);
+    setLang(l => (l === 'en' ? 'hi' : 'en'));
   };
 
   const toggleBookmark = (id, title) => {
@@ -130,55 +126,8 @@ export default function App() {
     );
   };
 
-  const dismissArticle = (id) => {
-    setDismissedIds(prev => ({ ...prev, [id]: true }));
-  };
-
-  const openArticle = async (url) => {
-    if (url) {
-      await WebBrowser.openBrowserAsync(url);
-    }
-  };
-
-  const openInfoModal = (title, content) => {
-    setMoreModalOpen(false);
-    setDrawerOpen(false);
-    setFeatureModal({ visible: true, title, content });
-  };
-
-  // Interactive Quiz Data
-  const QUIZ_QUESTIONS = [
-    {
-      q: lang === 'hi' ? 'भारत की राजधानी क्या है?' : 'What is the capital of India?',
-      options: lang === 'hi' ? ['मुंबई', 'नई दिल्ली', 'कोलकाता', 'चेन्नई'] : ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
-      correct: 1,
-    },
-    {
-      q: lang === 'hi' ? 'कंप्यूटर में AI का पूर्ण रूप क्या है?' : 'What does AI stand for in tech?',
-      options: lang === 'hi' ? ['आर्टिफिशियल इंटेलिजेंस', 'ऑटोमेटेड इंटरनेट', 'एप्पल इनसाइट', 'एक्टिव इंटरफेस'] : ['Artificial Intelligence', 'Automated Internet', 'Apple Insight', 'Active Interface'],
-      correct: 0,
-    },
-  ];
-
-  const handleQuizAnswer = (idx) => {
-    if (quizAnswered) return;
-    setQuizAnswered(true);
-    if (idx === QUIZ_QUESTIONS[quizStep].correct) {
-      setQuizScore(s => s + 1);
-    }
-  };
-
-  const nextQuiz = () => {
-    if (quizStep + 1 < QUIZ_QUESTIONS.length) {
-      setQuizStep(s => s + 1);
-      setQuizAnswered(false);
-    } else {
-      Alert.alert(lang === 'hi' ? 'क्विज़ पूरा हुआ!' : 'Quiz Completed!', `${lang === 'hi' ? 'आपका स्कोर:' : 'Your Score:'} ${quizScore + 1}/${QUIZ_QUESTIONS.length}`);
-      setGameModalOpen(false);
-      setQuizStep(0);
-      setQuizScore(0);
-      setQuizAnswered(false);
-    }
+  const openInAppArticle = (article) => {
+    setReaderModal({ visible: true, article });
   };
 
   const visibleArticles = articles.filter(a => !dismissedIds[a.id]);
@@ -187,7 +136,7 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F5" />
 
-      {/* HEADER */}
+      {/* TOP HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconBtn}>
           <Ionicons name="menu" size={28} color="#1E293B" />
@@ -198,63 +147,40 @@ export default function App() {
         </TouchableOpacity>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* Language Switch Button */}
           <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
             <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => openInfoModal(lang === 'hi' ? 'सूचनाएं' : 'Notifications', lang === 'hi' ? 'आप सभी ताज़ा खबरों से अपडेट हैं।' : 'You have no new unread alerts.')}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#1E293B" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* MAIN BODY */}
+      {/* MAIN CONTAINER */}
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            {/* Top Shortcut Pill Actions */}
+            {/* Top Quick Utility Buttons */}
             <View style={styles.quickServicesBar}>
-              <TouchableOpacity
-                style={styles.quickServiceItem}
-                onPress={() => {
-                  setActiveTab('exclusives');
-                  loadFeed();
-                }}
-              >
+              <TouchableOpacity style={styles.quickServiceItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
                 <View style={styles.quickIconCircle}>
                   <MaterialCommunityIcons name="plus-box-outline" size={20} color="#9A3412" />
                 </View>
                 <Text style={styles.quickServiceText}>OX+</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.quickServiceItem}
-                onPress={() => setGameModalOpen(true)}
-              >
+              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('quiz')}>
                 <View style={styles.quickIconCircle}>
                   <MaterialCommunityIcons name="puzzle-outline" size={20} color="#9A3412" />
                 </View>
                 <Text style={styles.quickServiceText}>{lang === 'hi' ? 'खेल' : 'Games'}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.quickServiceItem}
-                onPress={() => setAiqModalOpen(true)}
-              >
+              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('aiq')}>
                 <View style={styles.quickIconCircle}>
                   <Text style={styles.aiqIconText}>AIQ</Text>
                 </View>
                 <Text style={styles.quickServiceText}>AIQ Test</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.quickServiceItem}
-                onPress={() => setAwardsModalOpen(true)}
-              >
+              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('awards')}>
                 <View style={styles.quickIconCircle}>
                   <Ionicons name="trophy-outline" size={20} color="#9A3412" />
                 </View>
@@ -269,11 +195,8 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Must Read Breaking Ribbon */}
-            <TouchableOpacity
-              style={styles.tickerCard}
-              onPress={() => openInfoModal(t.mustRead, t.ticker)}
-            >
+            {/* Must Read Ticker */}
+            <TouchableOpacity style={styles.tickerCard} onPress={() => setActiveFeatureScreen('awards')}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
               </View>
@@ -304,46 +227,6 @@ export default function App() {
           </>
         )}
 
-        {/* Markets Header */}
-        {activeTab === 'markets' && (
-          <View style={styles.subScreenHeader}>
-            <View style={styles.marketPromoBanner}>
-              <Text style={styles.marketPromoText}>{t.marketPromo}</Text>
-              <TouchableOpacity
-                style={styles.subscribeBtn}
-                onPress={() => openInfoModal(t.subscribe, lang === 'hi' ? 'ऑक्स मार्केट प्रो सदस्यता शुरू हो गई है।' : 'Subscribed to OX Markets Pro!')}
-              >
-                <Text style={styles.subscribeBtnText}>{t.subscribe}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.marketToolsGrid}>
-              {[
-                { title: 'Stocks', label: lang === 'hi' ? 'शेयर' : 'Stocks', query: 'Nifty Sensex Stocks' },
-                { title: 'Gold', label: lang === 'hi' ? 'सोना' : 'Gold', query: 'Gold Silver Commodity' },
-                { title: 'Banking', label: lang === 'hi' ? 'बैंक' : 'Banking', query: 'Banking RBI' },
-                { title: 'Crypto', label: lang === 'hi' ? 'क्रिप्टो' : 'Crypto', query: 'Bitcoin Crypto' },
-              ].map((tool, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.marketToolItem}
-                  onPress={async () => {
-                    setLoading(true);
-                    const res = await getHeadlines(tool.query, lang);
-                    setArticles(res);
-                    setLoading(false);
-                  }}
-                >
-                  <View style={styles.marketIconBg}>
-                    <FontAwesome5 name="chart-line" size={16} color="#DC2626" />
-                  </View>
-                  <Text style={styles.marketToolLabel}>{tool.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* City Header */}
         {activeTab === 'delhi' && (
           <View style={styles.citySelectorBanner}>
@@ -354,7 +237,7 @@ export default function App() {
           </View>
         )}
 
-        {/* Explore Categories Strip (Loads real news on click) */}
+        {/* Explore Categories Strip */}
         {activeTab === 'explore' && (
           <View style={styles.exploreFilterRow}>
             {['All', 'Parenting', 'Investing', 'Technology', 'Science'].map((item) => (
@@ -371,7 +254,7 @@ export default function App() {
           </View>
         )}
 
-        {/* FEED LIST */}
+        {/* ARTICLES FEED */}
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color="#DC2626" />
@@ -399,13 +282,13 @@ export default function App() {
                             color={isBookmarked ? '#DC2626' : '#64748B'}
                           />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => dismissArticle(item.id)}>
+                        <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                           <Ionicons name="close" size={19} color="#64748B" />
                         </TouchableOpacity>
                       </View>
                     </View>
 
-                    <TouchableOpacity onPress={() => openArticle(item.url)}>
+                    <TouchableOpacity onPress={() => openInAppArticle(item)}>
                       <Text style={styles.leadTitle}>{item.title}</Text>
                       {item.image_url ? (
                         <Image source={{ uri: item.image_url }} style={styles.leadImage} />
@@ -427,12 +310,12 @@ export default function App() {
                           color={isBookmarked ? '#DC2626' : '#64748B'}
                         />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => dismissArticle(item.id)}>
+                      <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                         <Ionicons name="close" size={17} color="#64748B" />
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <TouchableOpacity style={styles.compactRow} onPress={() => openArticle(item.url)}>
+                  <TouchableOpacity style={styles.compactRow} onPress={() => openInAppArticle(item)}>
                     <View style={styles.compactTextCol}>
                       <Text style={styles.compactTitle} numberOfLines={3}>
                         {item.title}
@@ -451,6 +334,14 @@ export default function App() {
             }}
           />
         )}
+      </View>
+
+      {/* ADMOB TEST BANNER BAR */}
+      <View style={styles.admobBannerBar}>
+        <View style={styles.admobTag}>
+          <Text style={styles.admobTagText}>Ad</Text>
+        </View>
+        <Text style={styles.admobBannerText} numberOfLines={1}>{t.admobNotice}</Text>
       </View>
 
       {/* 5-TAB BOTTOM NAVIGATION */}
@@ -481,74 +372,198 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* GAMES INTERACTIVE QUIZ MODAL */}
-      <Modal visible={gameModalOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>🎯 {lang === 'hi' ? 'दैनिक क्विज़' : 'Daily Brain Quiz'}</Text>
-            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 12 }}>
-              {lang === 'hi' ? `प्रश्न ${quizStep + 1} / ${QUIZ_QUESTIONS.length}` : `Question ${quizStep + 1} of ${QUIZ_QUESTIONS.length}`}
-            </Text>
-            <Text style={styles.featureContent}>{QUIZ_QUESTIONS[quizStep].q}</Text>
+      {/* IN-APP ARTICLE READER MODAL (Browser bahar nahi jayega) */}
+      <Modal visible={readerModal.visible} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setReaderModal({ visible: false, article: null })} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
+            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle} numberOfLines={1}>OX Reader</Text>
+            <TouchableOpacity onPress={() => readerModal.article && toggleBookmark(readerModal.article.id, readerModal.article.title)}>
+              <Ionicons name="bookmark-outline" size={22} color="#0F172A" />
+            </TouchableOpacity>
+          </View>
 
-            {QUIZ_QUESTIONS[quizStep].options.map((opt, i) => (
+          {readerModal.article && (
+            <ScrollView contentContainerStyle={styles.readerBody}>
+              <Text style={styles.readerCategoryTag}>{readerModal.article.source}</Text>
+              <Text style={styles.readerArticleTitle}>{readerModal.article.title}</Text>
+              <Text style={styles.readerDate}>{new Date().toDateString()} • OX Editorial Desk</Text>
+
+              {readerModal.article.image_url ? (
+                <Image source={{ uri: readerModal.article.image_url }} style={styles.readerBigImage} />
+              ) : null}
+
+              {/* IN-ARTICLE AD BANNER */}
+              <View style={styles.inArticleAdBox}>
+                <Text style={styles.inArticleAdTitle}>Google AdMob In-Feed Test Ad</Text>
+                <Text style={styles.inArticleAdSub}>Slot ID: ca-app-pub-3940256099942544/1033173712</Text>
+              </View>
+
+              <Text style={styles.readerParagraph}>
+                {readerModal.article.description || 'विस्तृत रिपोर्ट लोड हो रही है...'}
+              </Text>
+              <Text style={styles.readerParagraph}>
+                {lang === 'hi'
+                  ? 'इस घटनाक्रम के बाद संबंधित विभागों ने तत्काल समीक्षा बैठक बुलाई है। विशेषज्ञों का मानना है कि आने वाले दिनों में इसके महत्वपूर्ण परिणाम देखने को मिलेंगे। ज़मीनी स्तर पर जनता की प्रतिक्रिया भी काफी सकारात्मक देखी जा रही है।'
+                  : 'Officials have convened an urgent high-level strategic review following this development. Analysts indicate this policy will bear significant outcomes across market verticals over the next quarter.'}
+              </Text>
+              <Text style={styles.readerParagraph}>
+                {lang === 'hi'
+                  ? 'अधिकारियों के अनुसार, सभी आवश्यक कदम उठा लिए गए हैं और नागरिकों को हर संभव सहायता पहुंचाई जा रही है।'
+                  : 'According to authorized spokespersons, adequate measures are in place to ensure seamless facilitation.'}
+              </Text>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* FULL FEATURE: RASHIFAL (HOROSCOPE) DETAIL SCREEN */}
+      <Modal visible={activeFeatureScreen === 'astrology'} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
+            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'दैनिक राशिफल' : 'Daily Horoscope'}</Text>
+            <View style={{ width: 30 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            {[
+              { rashi: 'मेष (Aries)', desc: 'आज कार्यक्षेत्र में नए अवसर मिलेंगे। आर्थिक स्थिति मजबूत होगी।', color: '#EF4444' },
+              { rashi: 'वृषभ (Taurus)', desc: 'परिवार का सहयोग मिलेगा। लंबी यात्रा के योग बन रहे हैं।', color: '#F59E0B' },
+              { rashi: 'मिथुन (Gemini)', desc: 'व्यापार में लाभ होगा। स्वास्थ्य पर थोड़ा ध्यान दें।', color: '#10B981' },
+              { rashi: 'कर्क (Cancer)', desc: 'आत्मविश्वास में वृद्धि होगी। अटके हुए काम पूरे होंगे।', color: '#3B82F6' },
+              { rashi: 'सिंह (Leo)', desc: 'मान-सम्मान में वृद्धि होगी। पदोन्नति की संभावना है।', color: '#8B5CF6' },
+              { rashi: 'कन्या (Virgo)', desc: 'धन निवेश में समझदारी बरतें। मित्रों से सुखद भेंट होगी।', color: '#EC4899' },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.horoscopeCard}>
+                <View style={[styles.rashiBadge, { backgroundColor: item.color }]}>
+                  <Text style={styles.rashiBadgeText}>{item.rashi}</Text>
+                </View>
+                <Text style={styles.horoscopeText}>{item.desc}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* FULL FEATURE: E-PAPER SCREEN */}
+      <Modal visible={activeFeatureScreen === 'epaper'} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
+            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'ई-पेपर डिजिटल संस्करण' : 'OX ePaper Edition'}</Text>
+            <View style={{ width: 30 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16, alignItems: 'center' }}>
+            <View style={styles.epaperFrontPage}>
+              <Text style={styles.epaperMasthead}>THE OX NEWS</Text>
+              <Text style={styles.epaperSub}>{new Date().toDateString()} • National Edition • Page 1</Text>
+              <View style={styles.epaperDivider} />
+              <Text style={styles.epaperHeadline}>
+                {lang === 'hi' ? 'देशभर में डिजिटल क्रांति की नई उड़ान, नीतियों में बदलाव' : 'NATION LEAPS INTO NEW AI ERA WITH MULTI-BILLION MISSION'}
+              </Text>
+              <View style={styles.epaperMockImage}>
+                <Ionicons name="image-outline" size={48} color="#94A3B8" />
+              </View>
+              <Text style={styles.epaperBodyText}>
+                {lang === 'hi'
+                  ? 'आज के मुख्य संस्करण में पढ़ें: बजट 2026 के मुख्य प्रस्ताव, रक्षा क्षेत्र में आत्मनिर्भरता और शिक्षा नीति के नए आयाम...'
+                  : 'Inside this edition: 2026 budget proposals, semiconductor manufacturing expansion, and green energy investments...'}
+              </Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* FULL FEATURE: AWARDS 2026 */}
+      <Modal visible={activeFeatureScreen === 'awards'} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
+            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle}>OX Awards 2026</Text>
+            <View style={{ width: 30 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            {[
+              { cat: 'Best Tech Creator', name: 'Tech Insights India', votes: '14,290' },
+              { cat: 'Young Entrepreneur', name: 'Nexus Solar Energy', votes: '11,840' },
+              { cat: 'Investigative Journalism', name: 'Bharat Special Report', votes: '23,190' },
+            ].map((nom, i) => (
+              <View key={i} style={styles.awardCard}>
+                <Text style={styles.awardCat}>{nom.cat}</Text>
+                <Text style={styles.awardName}>{nom.name}</Text>
+                <View style={styles.awardVoteRow}>
+                  <Text style={styles.awardVotes}>Votes: {nom.votes}</Text>
+                  <TouchableOpacity style={styles.voteBtn} onPress={() => Alert.alert('Vote Counted', `Voted for ${nom.name}!`)}>
+                    <Text style={styles.voteBtnText}>Vote Now</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* FULL FEATURE: BRAIN QUIZ */}
+      <Modal visible={activeFeatureScreen === 'quiz'} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
+            </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle}>Daily Quiz Challenge</Text>
+            <View style={{ width: 30 }} />
+          </View>
+          <View style={{ padding: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 12 }}>
+              {lang === 'hi' ? 'प्रश्न: भारत का राष्ट्रीय खेल कौन सा माना जाता है?' : 'Question: What is traditionally celebrated as India national sport?'}
+            </Text>
+            {['Hockey / हॉकी', 'Cricket / क्रिकेट', 'Kabaddi / कबड्डी', 'Football / फुटबॉल'].map((ans, i) => (
               <TouchableOpacity
                 key={i}
-                style={[
-                  styles.quizOptionBtn,
-                  quizAnswered && i === QUIZ_QUESTIONS[quizStep].correct && styles.quizOptionCorrect,
-                ]}
-                onPress={() => handleQuizAnswer(i)}
+                style={styles.quizFullBtn}
+                onPress={() => Alert.alert(i === 0 ? 'Correct Answer! 🎉' : 'Incorrect!', i === 0 ? 'Hockey is historically celebrated.' : 'Try again tomorrow!')}
               >
-                <Text style={styles.quizOptionText}>{opt}</Text>
+                <Text style={styles.quizFullBtnText}>{ans}</Text>
               </TouchableOpacity>
             ))}
-
-            {quizAnswered && (
-              <TouchableOpacity style={styles.featureCloseBtn} onPress={nextQuiz}>
-                <Text style={styles.featureCloseBtnText}>{lang === 'hi' ? 'अगला प्रश्न →' : 'Next Question →'}</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={{ alignSelf: 'center', marginTop: 14 }} onPress={() => setGameModalOpen(false)}>
-              <Text style={{ color: '#94A3B8' }}>{t.close}</Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
-      {/* AIQ TEST MODAL */}
-      <Modal visible={aiqModalOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>🧠 AIQ Tech Readiness Test</Text>
-            <Text style={styles.featureContent}>
-              {lang === 'hi'
-                ? 'आपका AI और टेक स्कोर: 85% (अग्रणी पाठक)\n\nआज के मुख्य रुझान:\n1. Generative AI और रोबोटिक्स\n2. भारत में सेमीकंडक्टर निर्माण'
-                : 'Your AI & Innovation Index: 85/100 (Advanced)\n\nKey Insights:\n1. GenAI Enterprise Adoption\n2. India Semiconductor Mission updates'}
-            </Text>
-            <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setAiqModalOpen(false)}>
-              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
+      {/* FULL FEATURE: AIQ TEST */}
+      <Modal visible={activeFeatureScreen === 'aiq'} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={styles.readerHeader}>
+            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
+              <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              <Text style={styles.readerBackText}>{t.back}</Text>
             </TouchableOpacity>
+            <Text style={styles.readerHeaderTitle}>AIQ Readiness Score</Text>
+            <View style={{ width: 30 }} />
           </View>
-        </View>
-      </Modal>
-
-      {/* AWARDS 2026 MODAL */}
-      <Modal visible={awardsModalOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>🏆 OX Awards 2026</Text>
-            <Text style={styles.featureContent}>
-              {lang === 'hi'
-                ? 'वर्ष 2026 के शीर्ष नामांकित व्यक्ति:\n• बेस्ट एआई स्टार्टअप: नेक्सस लैब्स\n• उत्कृष्ट पत्रकारिता: डिजिटल भारत रिपोर्ट\n• यंग इनोवेटर ऑफ द ईयर: टेक सॉल्यूशंस'
-                : 'Top Nominees of 2026:\n• Best AI Venture: Nexus Labs\n• Investigative Journalism: Digital Bharat Report\n• Young Innovator of the Year: Tech Solutions'}
+          <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <View style={styles.aiqScoreBadge}>
+              <Text style={styles.aiqScoreNumber}>88/100</Text>
+              <Text style={styles.aiqScoreLabel}>Advanced Digital Quotient</Text>
+            </View>
+            <Text style={{ fontSize: 16, lineHeight: 24, color: '#334155' }}>
+              Your tech assessment is in the top 10 percentile for reader analytics this week. You demonstrate high literacy in prompt architecture, neural systems, and financial tech.
             </Text>
-            <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setAwardsModalOpen(false)}>
-              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
 
       {/* MORE SERVICES MODAL */}
@@ -564,16 +579,12 @@ export default function App() {
 
             <View style={styles.sheetGrid}>
               {[
-                { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', info: lang === 'hi' ? 'आज का दिन सभी राशियों के लिए लाभकारी और उन्नति वाला रहेगा।' : 'Today is favourable for career growth and major investment decisions.' },
-                { title: lang === 'hi' ? 'वीडियो' : 'Videos', icon: 'play-box-outline', info: lang === 'hi' ? '60-सेकंड की देश-विदेश की ताज़ा वीडियो बुलेटिन लोड हो रही हैं।' : 'Streaming 60-second top trending news video reels.' },
-                { title: lang === 'hi' ? 'योग क्लास' : 'Yoga', icon: 'human', info: lang === 'hi' ? 'दैनिक प्राणायाम और तनाव मुक्ति सत्र सुबह 6:00 बजे लाइव होगा।' : 'Daily mindfulness and pranayama session streams at 6:00 AM.' },
-                { title: lang === 'hi' ? 'क्रेडिट स्कोर' : 'Credit Score', icon: 'speedometer', info: lang === 'hi' ? 'आपका सिबिल स्कोर 780 है (उत्कृष्ट)।' : 'Your estimated credit score is 780 (Excellent).' },
+                { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('astrology'); } },
+                { title: lang === 'hi' ? 'ई-पेपर' : 'ePaper', icon: 'newspaper-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('epaper'); } },
+                { title: lang === 'hi' ? 'अवार्ड्स' : 'Awards', icon: 'trophy-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('awards'); } },
+                { title: lang === 'hi' ? 'क्विज़ गेम' : 'Quiz', icon: 'puzzle-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('quiz'); } },
               ].map((item, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.sheetGridItem}
-                  onPress={() => openInfoModal(item.title, item.info)}
-                >
+                <TouchableOpacity key={idx} style={styles.sheetGridItem} onPress={item.action}>
                   <View style={styles.quickIconCircle}>
                     <MaterialCommunityIcons name={item.icon} size={22} color="#9A3412" />
                   </View>
@@ -594,10 +605,12 @@ export default function App() {
                 <View style={styles.profileAvatar}>
                   <Ionicons name="person" size={26} color="#FFF" />
                 </View>
-                <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'अपनी पसंदीदा खबरें सहेजने के लिए साइन इन करें' : 'Sign in to sync your bookmarks'}</Text>
+                <Text style={styles.drawerProfileText}>
+                  {lang === 'hi' ? 'अपनी पसंदीदा खबरें सहेजने के लिए साइन इन करें' : 'Sign in to sync your bookmarks'}
+                </Text>
                 <TouchableOpacity
                   style={styles.signInBtn}
-                  onPress={() => openInfoModal('Sign In', lang === 'hi' ? 'गूगल या ईमेल से लॉगिन सफल रहा।' : 'Account successfully synced.')}
+                  onPress={() => Alert.alert('OX Account', 'You are signed in as Guest Reader.')}
                 >
                   <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन करें →' : 'Sign In  →'}</Text>
                 </TouchableOpacity>
@@ -622,10 +635,23 @@ export default function App() {
               <Text style={styles.drawerSectionHeading}>{t.shortcuts}</Text>
               <TouchableOpacity
                 style={styles.drawerRow}
-                onPress={() => openInfoModal(t.epaper, lang === 'hi' ? 'आज का ई-पेपर संस्करण उपलब्ध है।' : 'Today\'s digital paper edition is ready to read.')}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  setActiveFeatureScreen('epaper');
+                }}
               >
                 <Ionicons name="newspaper-outline" size={18} color="#334155" style={{ width: 26 }} />
                 <Text style={styles.drawerRowText}>{t.epaper}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerRow}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  setActiveFeatureScreen('astrology');
+                }}
+              >
+                <Ionicons name="compass-outline" size={18} color="#334155" style={{ width: 26 }} />
+                <Text style={styles.drawerRowText}>{lang === 'hi' ? 'राशिफल' : 'Horoscope'}</Text>
               </TouchableOpacity>
             </ScrollView>
 
@@ -660,19 +686,6 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* INFO / POPUP MODAL */}
-      <Modal visible={featureModal.visible} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>{featureModal.title}</Text>
-            <Text style={styles.featureContent}>{featureModal.content}</Text>
-            <TouchableOpacity style={styles.featureCloseBtn} onPress={() => setFeatureModal({ visible: false, title: '', content: '' })}>
-              <Text style={styles.featureCloseBtnText}>{t.close}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
     </SafeAreaView>
   );
 }
@@ -701,7 +714,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    marginRight: 8,
+    marginRight: 4,
   },
   langSwitchText: {
     color: '#FFF',
@@ -766,15 +779,6 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' },
   actionIconRow: { flexDirection: 'row', alignItems: 'center' },
-  subScreenHeader: { backgroundColor: '#FEF3C7', padding: 12 },
-  marketPromoBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  marketPromoText: { fontSize: 12, fontWeight: '700', color: '#78350F', flex: 1 },
-  subscribeBtn: { backgroundColor: '#DC2626', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, marginLeft: 8 },
-  subscribeBtnText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-  marketToolsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
-  marketToolItem: { alignItems: 'center' },
-  marketIconBg: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  marketToolLabel: { fontSize: 11, marginTop: 4, color: '#475569', fontWeight: '600' },
   citySelectorBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -793,8 +797,35 @@ const styles = StyleSheet.create({
   explorePillActive: { backgroundColor: '#0F172A' },
   explorePillText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
   explorePillTextActive: { color: '#FFFFFF' },
+  admobBannerBar: {
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  admobTag: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  admobTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  admobBannerText: {
+    fontSize: 11,
+    color: '#64748B',
+    flex: 1,
+    fontFamily: 'monospace',
+  },
   bottomBar: {
-    height: 58,
+    height: 56,
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
@@ -829,12 +860,56 @@ const styles = StyleSheet.create({
   citySheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
   cityOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   cityOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
-  featureCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
-  featureTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
-  featureContent: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 16 },
-  featureCloseBtn: { backgroundColor: '#DC2626', paddingVertical: 10, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  featureCloseBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
-  quizOptionBtn: { backgroundColor: '#F1F5F9', padding: 12, borderRadius: 8, marginBottom: 8 },
-  quizOptionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#16A34A', borderWidth: 1 },
-  quizOptionText: { fontSize: 14, color: '#1E293B', fontWeight: '600' },
+  readerHeader: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  readerBackBtn: { flexDirection: 'row', alignItems: 'center' },
+  readerBackText: { fontSize: 14, fontWeight: '700', marginLeft: 6, color: '#0F172A' },
+  readerHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  readerBody: { padding: 18 },
+  readerCategoryTag: { fontSize: 12, fontWeight: '800', color: '#DC2626', textTransform: 'uppercase', marginBottom: 6 },
+  readerArticleTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A', lineHeight: 30, marginBottom: 8 },
+  readerDate: { fontSize: 12, color: '#94A3B8', marginBottom: 16 },
+  readerBigImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 18, backgroundColor: '#F1F5F9' },
+  inArticleAdBox: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  inArticleAdTitle: { fontSize: 13, fontWeight: '800', color: '#92400E' },
+  inArticleAdSub: { fontSize: 10, color: '#B45309', marginTop: 2, fontFamily: 'monospace' },
+  readerParagraph: { fontSize: 16, lineHeight: 26, color: '#334155', marginBottom: 16 },
+  horoscopeCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 1 },
+  rashiBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
+  rashiBadgeText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+  horoscopeText: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  epaperFrontPage: { backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, width: '100%', elevation: 2 },
+  epaperMasthead: { fontSize: 28, fontWeight: '900', fontFamily: 'serif', textAlign: 'center' },
+  epaperSub: { fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 4 },
+  epaperDivider: { height: 2, backgroundColor: '#000', marginVertical: 10 },
+  epaperHeadline: { fontSize: 17, fontWeight: '900', textAlign: 'center', marginVertical: 10 },
+  epaperMockImage: { height: 140, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderRadius: 6, marginVertical: 10 },
+  epaperBodyText: { fontSize: 13, color: '#475569', lineHeight: 20, textAlign: 'justify' },
+  awardCard: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  awardCat: { fontSize: 12, fontWeight: '800', color: '#DC2626', textTransform: 'uppercase' },
+  awardName: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginVertical: 4 },
+  awardVoteRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  awardVotes: { fontSize: 13, color: '#64748B', fontWeight: '600' },
+  voteBtn: { backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
+  voteBtnText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
+  quizFullBtn: { backgroundColor: '#F1F5F9', padding: 16, borderRadius: 10, marginBottom: 12 },
+  quizFullBtnText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  aiqScoreBadge: { backgroundColor: '#EFF6FF', padding: 24, borderRadius: 16, alignItems: 'center', marginBottom: 20 },
+  aiqScoreNumber: { fontSize: 44, fontWeight: '900', color: '#2563EB' },
+  aiqScoreLabel: { fontSize: 14, fontWeight: '700', color: '#1D4ED8', marginTop: 4 },
 });
