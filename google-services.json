@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "564274906544",
+    "project_id": "ox-news",
+    "storage_bucket": "ox-news.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564274906544:android:9aaf0896ea3950fbcb0275",
+        "android_client_info": {
+          "package_name": "com.oxnews.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "564274906544-cg1kol27nr2lsra8sbo5rk1r69p4uk29.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.oxnews.app",
+            "certificate_hash": "8d260ae04e93c50913d76712b26d57e71a7c6ad9"
+          }
+        },
+        {
+          "client_id": "564274906544-js8lgcnmo5cn2vhvfnf67f6upph1n3i2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3OCmrhlH76uTttlsgTqLbgaBkIJ2ZgwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "564274906544-js8lgcnmo5cn2vhvfnf67f6upph1n3i2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

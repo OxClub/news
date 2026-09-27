@@ -20,6 +20,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width } = Dimensions.get('window');
@@ -36,11 +37,11 @@ const STRINGS = {
     mobilePlaceholder: 'Mobile Number',
     or: 'Or',
     email: 'Email',
-    googleSign: 'Sign In',
+    googleSign: 'Google Login',
     close: 'Close',
     back: 'Back',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
-    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'City', Technology: 'Technology', Opinions: 'Opinions and Edits', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
+    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'Delhi', Technology: 'Technology', Opinions: 'Opinions', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
   },
   hi: {
     title: 'द ऑक्स न्यूज़',
@@ -53,15 +54,15 @@ const STRINGS = {
     mobilePlaceholder: 'मोबाइल नंबर',
     or: 'या',
     email: 'ईमेल',
-    googleSign: 'साइन इन',
+    googleSign: 'गूगल लॉगिन',
     close: 'बंद करें',
     back: 'वापस जाएं',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'एक्सक्लूसिव' },
-    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'शहर', Technology: 'तकनीक', Opinions: 'विचार और समीक्षा', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
+    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'दिल्ली', Technology: 'तकनीक', Opinions: 'विचार', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
   },
 };
 
-const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Technology', 'Opinions', 'Humour', 'Astrology', 'EconomicTimes', 'Lifestyle'];
+const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Technology', 'Opinions', 'Astrology', 'Lifestyle'];
 const CITIES = ['Delhi', 'Uttar Pradesh', 'Bihar', 'Jharkhand', 'Madhya Pradesh', 'Maharashtra', 'Rajasthan', 'Gujarat', 'West Bengal', 'Karnataka'];
 
 export default function App() {
@@ -70,7 +71,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
-  const [selectedCity, setSelectedCity] = useState('Delhi');
+  const [selectedCity, setSelectedCity] = useState('Bihar');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,9 +79,8 @@ export default function App() {
   // Auth & User State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authSubView, setAuthSubView] = useState('main'); // 'main', 'email', 'google'
+  const [authSubView, setAuthSubView] = useState('main'); 
   
-  // Inputs
   const [mobileInput, setMobileInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passInput, setPassInput] = useState('');
@@ -94,6 +94,12 @@ export default function App() {
   const [dismissedIds, setDismissedIds] = useState({});
 
   useEffect(() => {
+    // असली गूगल क्लाइंट आईडी (Web Client ID from google-services.json)
+    GoogleSignin.configure({
+      webClientId: '564274906544-js8lgcnmo5cn2vhvfnf67f6upph1n3i2.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+
     (async () => {
       try {
         const session = await AsyncStorage.getItem('@ox_cloud_session');
@@ -106,9 +112,9 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Stock Market Sensex Nifty Business';
-      else if (activeTab === 'city') query = `${selectedCity} local news updates`;
-      else if (activeTab === 'exclusives') query = 'Exclusive trending investigative news';
+      if (activeTab === 'markets') query = 'Business';
+      else if (activeTab === 'city') query = selectedCity;
+      else if (activeTab === 'exclusives') query = 'Special Investigative News';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -125,7 +131,6 @@ export default function App() {
     loadFeed();
   }, [loadFeed]);
 
-  // Handle City Change
   const handleCitySelect = (city) => {
     setSelectedCity(city);
     setActiveCategory(city);
@@ -133,12 +138,8 @@ export default function App() {
     setActiveTab('city');
   };
 
-  // Auth Handlers
   const handleMobileLogin = async () => {
-    if (!mobileInput || mobileInput.length < 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
-      return;
-    }
+    if (!mobileInput || mobileInput.length < 10) return Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
     const userSession = { name: `User (+91 ${mobileInput.slice(-5)})`, email: `mob_${mobileInput}@oxnews.in`, isGuest: false };
     await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
     setCurrentUser(userSession);
@@ -147,10 +148,7 @@ export default function App() {
   };
 
   const handleEmailLogin = async () => {
-    if (!emailInput || !passInput) {
-      Alert.alert('Error', 'Please enter both Email and Password.');
-      return;
-    }
+    if (!emailInput || !passInput) return Alert.alert('Error', 'Please enter both Email and Password.');
     const userSession = { name: emailInput.split('@')[0], email: emailInput, isGuest: false };
     await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
     setCurrentUser(userSession);
@@ -158,22 +156,46 @@ export default function App() {
     setEmailInput(''); setPassInput(''); setAuthSubView('main');
   };
 
-  const handleGoogleAccountSelect = async (email, name) => {
-    const userSession = { name: name, email: email, isGuest: false };
-    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
-    setCurrentUser(userSession);
-    setAuthModalOpen(false);
-    setAuthSubView('main');
+  // असली 1-Tap नेटिव गूगल लॉगिन
+  const handleRealGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const user = userInfo.user;
+      
+      const userSession = { name: user.name, email: user.email, isGuest: false };
+      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
+      setCurrentUser(userSession);
+      setAuthModalOpen(false);
+      
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation already in progress
+      } else {
+        Alert.alert('Google Sign-In Error', 'Unable to connect with Google. Please try again later.');
+      }
+    }
   };
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('@ox_cloud_session');
     setCurrentUser(null);
+    try {
+      await GoogleSignin.signOut(); // असली गूगल खाते से भी साइन-आउट
+    } catch (e) {}
   };
 
   const toggleBookmark = (id, title) => {
     const isNow = !bookmarkedIds[id];
     setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
   };
 
   const visibleArticles = articles.filter(a => !dismissedIds[a.id]);
@@ -202,9 +224,7 @@ export default function App() {
         {activeTab === 'newsfeed' && (
           <>
             <TouchableOpacity style={styles.tickerCard}>
-              <View style={styles.tickerBadge}>
-                <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
-              </View>
+              <View style={styles.tickerBadge}><Text style={styles.tickerBadgeText}>{t.mustRead}</Text></View>
               <Text style={styles.tickerTitle} numberOfLines={2}>{t.ticker}</Text>
             </TouchableOpacity>
 
@@ -223,12 +243,12 @@ export default function App() {
           </>
         )}
 
-        {/* CITY BANNER IF CITY TAB IS ACTIVE */}
+        {/* CITY BANNER */}
         {activeTab === 'city' && (
           <View style={styles.citySelectorBanner}>
             <Text style={styles.citySelectorText}>📍 Location: <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
             <TouchableOpacity style={styles.changeCityBtn} onPress={() => setLocationModalOpen(true)}>
-              <Text style={styles.changeCityBtnText}>Change City</Text>
+              <Text style={styles.changeCityBtnText}>Change Location</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -244,6 +264,7 @@ export default function App() {
             renderItem={({ item, index }) => {
               const isLargeLead = index === 0;
               const isBookmarked = !!bookmarkedIds[item.id];
+              const timeString = formatTime(item.pubDate);
 
               return (
                 <View>
@@ -263,6 +284,7 @@ export default function App() {
                       <TouchableOpacity onPress={() => setWebViewModal({ visible: true, url: item.url, title: item.title })}>
                         <Text style={styles.leadTitle}>{item.title}</Text>
                         {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.leadImage} /> : null}
+                        <Text style={styles.timeText}><Ionicons name="time-outline" size={12}/> {timeString}</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
@@ -281,6 +303,7 @@ export default function App() {
                       <TouchableOpacity style={styles.compactRow} onPress={() => setWebViewModal({ visible: true, url: item.url, title: item.title })}>
                         <View style={styles.compactTextCol}>
                           <Text style={styles.compactTitle} numberOfLines={3}>{item.title}</Text>
+                          <Text style={styles.timeText}><Ionicons name="time-outline" size={11}/> {timeString}</Text>
                         </View>
                         {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.compactThumb} /> : null}
                       </TouchableOpacity>
@@ -316,10 +339,6 @@ export default function App() {
           <Ionicons name="compass-outline" size={21} color={activeTab === 'explore' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>{t.tabs.explore}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('exclusives')}>
-          <MaterialCommunityIcons name="shield-lock" size={22} color={activeTab === 'exclusives' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>{t.tabs.exclusives}</Text>
-        </TouchableOpacity>
       </View>
 
       {/* WEBVIEW MODAL */}
@@ -342,7 +361,7 @@ export default function App() {
         <View style={styles.modalBackdrop}>
           <View style={styles.citySheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.authCardMainTitle}>{lang === 'hi' ? 'अपना शहर/राज्य चुनें' : 'Select City/State'}</Text>
+              <Text style={styles.authCardMainTitle}>{lang === 'hi' ? 'अपना राज्य चुनें' : 'Select State/City'}</Text>
               <TouchableOpacity onPress={() => setLocationModalOpen(false)}><Ionicons name="close" size={22} color="#475569" /></TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 300 }}>
@@ -357,13 +376,13 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* AUTH MODAL (Real Working Flow) */}
+      {/* AUTH MODAL (Real Native Login) */}
       <Modal visible={authModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.authCard}>
             <View style={styles.sheetHeader}>
               <Text style={styles.authCardMainTitle}>
-                {authSubView === 'main' ? t.unlockTitle : (authSubView === 'email' ? 'Email Login' : 'Choose an Account')}
+                {authSubView === 'main' ? t.unlockTitle : 'Email Login'}
               </Text>
               <TouchableOpacity onPress={() => { setAuthModalOpen(false); setAuthSubView('main'); }}>
                 <Ionicons name="close" size={22} color="#475569" />
@@ -375,89 +394,40 @@ export default function App() {
                 <View style={styles.benefitBox}>
                   <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Bookmark articles you love</Text></View>
                   <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Comment, reply & join the debate</Text></View>
-                  <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Get access to newsletters</Text></View>
                 </View>
 
                 <View style={styles.mobileInputRow}>
-                  <TextInput
-                    placeholder={t.mobilePlaceholder}
-                    style={styles.authMobileInput}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={mobileInput}
-                    onChangeText={setMobileInput}
-                  />
+                  <TextInput placeholder={t.mobilePlaceholder} style={styles.authMobileInput} keyboardType="phone-pad" maxLength={10} value={mobileInput} onChangeText={setMobileInput} />
                   <TouchableOpacity style={styles.mobileArrowBtn} onPress={handleMobileLogin}>
                     <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.authDividerRow}>
-                  <View style={styles.authDividerLine} />
-                  <Text style={styles.authDividerText}>{t.or}</Text>
-                  <View style={styles.authDividerLine} />
+                  <View style={styles.authDividerLine} /><Text style={styles.authDividerText}>{t.or}</Text><View style={styles.authDividerLine} />
                 </View>
 
                 <View style={styles.socialAuthRow}>
                   <TouchableOpacity style={styles.socialOptionBtn} onPress={() => setAuthSubView('email')}>
-                    <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} />
-                    <Text style={styles.socialOptionText}>{t.email}</Text>
+                    <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} /><Text style={styles.socialOptionText}>{t.email}</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.socialOptionBtn} onPress={() => setAuthSubView('google')}>
-                    <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} />
-                    <Text style={styles.socialOptionText}>{t.googleSign}</Text>
+                  
+                  {/* असली गूगल अकाउंट पिकर बटन */}
+                  <TouchableOpacity style={styles.socialOptionBtn} onPress={handleRealGoogleLogin}>
+                    <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} /><Text style={styles.socialOptionText}>{t.googleSign}</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
 
-            {/* EMAIL REAL FORM */}
             {authSubView === 'email' && (
               <View>
                 <TextInput placeholder="Email Address" style={styles.realAuthInput} autoCapitalize="none" keyboardType="email-address" value={emailInput} onChangeText={setEmailInput} />
                 <TextInput placeholder="Password" style={styles.realAuthInput} secureTextEntry value={passInput} onChangeText={setPassInput} />
-                <TouchableOpacity style={styles.realSubmitBtn} onPress={handleEmailLogin}>
-                  <Text style={styles.realSubmitBtnText}>Login / Sign Up</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}>
-                  <Text style={styles.backBtnText}>Back</Text>
-                </TouchableOpacity>
+                <TouchableOpacity style={styles.realSubmitBtn} onPress={handleEmailLogin}><Text style={styles.realSubmitBtnText}>Login</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}><Text style={styles.backBtnText}>Back</Text></TouchableOpacity>
               </View>
             )}
-
-            {/* GOOGLE REAL PICKER SIMULATION */}
-            {authSubView === 'google' && (
-              <View>
-                <Text style={{fontSize: 13, color: '#64748B', marginBottom: 12}}>Select a Google account to continue to OX News</Text>
-                
-                <TouchableOpacity style={styles.googleAccountRow} onPress={() => handleGoogleAccountSelect('amit.kumar@gmail.com', 'Amit Kumar')}>
-                  <View style={styles.googleAvatar}><Text style={{color:'#FFF', fontWeight:'bold'}}>A</Text></View>
-                  <View>
-                    <Text style={styles.googleName}>Amit Kumar</Text>
-                    <Text style={styles.googleEmail}>amit.kumar@gmail.com</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.googleAccountRow} onPress={() => handleGoogleAccountSelect('oxnews.reader@gmail.com', 'OX Reader')}>
-                  <View style={[styles.googleAvatar, {backgroundColor: '#10B981'}]}><Text style={{color:'#FFF', fontWeight:'bold'}}>O</Text></View>
-                  <View>
-                    <Text style={styles.googleName}>OX Reader</Text>
-                    <Text style={styles.googleEmail}>oxnews.reader@gmail.com</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.googleAccountRow} onPress={() => setAuthSubView('email')}>
-                  <View style={[styles.googleAvatar, {backgroundColor: '#E2E8F0'}]}><Ionicons name="person-add" size={16} color="#475569" /></View>
-                  <Text style={[styles.googleName, {color: '#334155'}]}>Add another account</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}>
-                  <Text style={styles.backBtnText}>Back</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
           </View>
         </View>
       </Modal>
@@ -475,23 +445,18 @@ export default function App() {
                   <>
                     <Text style={styles.drawerUserNameText}>{currentUser.name}</Text>
                     <Text style={styles.drawerUserEmailText}>{currentUser.email}</Text>
-                    <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-                      <Text style={styles.logoutBtnText}>{lang === 'hi' ? 'लॉगआउट करें' : 'Logout'}</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}><Text style={styles.logoutBtnText}>{lang === 'hi' ? 'लॉगआउट करें' : 'Logout'}</Text></TouchableOpacity>
                   </>
                 ) : (
                   <>
                     <Text style={styles.drawerProfileText}>{t.signInPrompt}</Text>
-                    <TouchableOpacity style={styles.signInBtn} onPress={() => { setDrawerOpen(false); setAuthModalOpen(true); }}>
-                      <Text style={styles.signInBtnText}>{t.signInBtn}</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.signInBtn} onPress={() => { setDrawerOpen(false); setAuthModalOpen(true); }}><Text style={styles.signInBtnText}>{t.signInBtn}</Text></TouchableOpacity>
                   </>
                 )}
               </View>
 
               <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
               
-              {/* City Link in Drawer */}
               <TouchableOpacity style={styles.drawerRow} onPress={() => { setDrawerOpen(false); setLocationModalOpen(true); }}>
                 <Ionicons name="location-outline" size={16} color="#DC2626" style={{ width: 24 }} />
                 <Text style={[styles.drawerRowText, {color: '#DC2626'}]}>{t.cats.Delhi} : {selectedCity}</Text>
@@ -511,7 +476,6 @@ export default function App() {
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setDrawerOpen(false)} />
         </View>
       </Modal>
-
     </SafeAreaView>
   );
 }
@@ -536,8 +500,9 @@ const styles = StyleSheet.create({
   categoryTabTextActive: { color: '#000000' },
   listContent: { paddingBottom: 24 },
   leadCard: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  leadTitle: { fontSize: 18, fontWeight: '800', lineHeight: 25, color: '#0F172A', marginBottom: 10 },
-  leadImage: { width: '100%', height: 210, borderRadius: 8, backgroundColor: '#F1F5F9' },
+  leadTitle: { fontSize: 18, fontWeight: '800', lineHeight: 25, color: '#0F172A', marginBottom: 6 },
+  leadImage: { width: '100%', height: 210, borderRadius: 8, backgroundColor: '#F1F5F9', marginBottom: 8 },
+  timeText: { fontSize: 11, color: '#94A3B8', fontWeight: '600', marginTop: 4 },
   compactCard: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   compactRow: { flexDirection: 'row', justifyContent: 'space-between' },
   compactTextCol: { flex: 1, paddingRight: 12 },
@@ -558,7 +523,6 @@ const styles = StyleSheet.create({
   tabItem: { alignItems: 'center' },
   tabLabel: { fontSize: 10, marginTop: 2, color: '#64748B', fontWeight: '600' },
   tabLabelActive: { color: '#DC2626', fontWeight: '800' },
-  tabLabelExclusive: { color: '#DC2626', fontWeight: '800' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', flexDirection: 'row' },
@@ -600,8 +564,4 @@ const styles = StyleSheet.create({
   realSubmitBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
   backBtn: { marginTop: 14, alignItems: 'center' },
   backBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
-  googleAccountRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  googleAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  googleName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  googleEmail: { fontSize: 12, color: '#64748B' },
 });
