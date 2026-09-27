@@ -116,7 +116,7 @@ export default function App() {
       setCurrentUser(userInfo.user);
       setAuthModalOpen(false);
     } catch (error) {
-      Alert.alert('Login Error', 'Unable to login with Google.');
+      Alert.alert('Google Sign-In Error', `Code: ${error.code}\nMessage: ${error.message}`);
     }
   };
 
