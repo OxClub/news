@@ -19,11 +19,14 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import mobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width } = Dimensions.get('window');
+const REAL_AD_UNIT_ID = 'ca-app-pub-6509298197152386/1259197573';
+// Use Test ID in dev to ensure layout works, switch to REAL_AD_UNIT_ID for production
+const AD_UNIT = __DEV__ ? TestIds.BANNER : REAL_AD_UNIT_ID; 
 
 const STRINGS = {
   en: {
@@ -41,7 +44,7 @@ const STRINGS = {
     close: 'Close',
     back: 'Back',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
-    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'Delhi', Technology: 'Technology', Opinions: 'Opinions', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
+    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Technology', Opinions: 'Opinions', Humour: 'Humour', Astrology: 'Astrology', Lifestyle: 'Lifestyle' },
   },
   hi: {
     title: 'द ऑक्स न्यूज़',
@@ -58,7 +61,7 @@ const STRINGS = {
     close: 'बंद करें',
     back: 'वापस जाएं',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'एक्सक्लूसिव' },
-    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'दिल्ली', Technology: 'तकनीक', Opinions: 'विचार', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
+    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Opinions: 'विचार', Humour: 'हास्य', Astrology: 'राशिफल', Lifestyle: 'लाइफस्टाइल' },
   },
 };
 
@@ -71,12 +74,11 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
-  const [selectedCity, setSelectedCity] = useState('Bihar');
+  const [selectedCity, setSelectedCity] = useState('Delhi');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Auth & User State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authSubView, setAuthSubView] = useState('main'); 
@@ -85,7 +87,6 @@ export default function App() {
   const [emailInput, setEmailInput] = useState('');
   const [passInput, setPassInput] = useState('');
 
-  // Modals & Navigation
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
@@ -94,7 +95,12 @@ export default function App() {
   const [dismissedIds, setDismissedIds] = useState({});
 
   useEffect(() => {
-    // असली गूगल क्लाइंट आईडी (Web Client ID from google-services.json)
+    // 1. Initialize AdMob SDK
+    mobileAds().initialize().then(adapterStatuses => {
+      console.log('AdMob Initialized', adapterStatuses);
+    });
+
+    // 2. Configure Google Sign In
     GoogleSignin.configure({
       webClientId: '564274906544-js8lgcnmo5cn2vhvfnf67f6upph1n3i2.apps.googleusercontent.com',
       offlineAccess: true,
@@ -112,9 +118,8 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Business';
+      if (activeTab === 'markets') query = 'Business Finance';
       else if (activeTab === 'city') query = selectedCity;
-      else if (activeTab === 'exclusives') query = 'Special Investigative News';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -138,25 +143,6 @@ export default function App() {
     setActiveTab('city');
   };
 
-  const handleMobileLogin = async () => {
-    if (!mobileInput || mobileInput.length < 10) return Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
-    const userSession = { name: `User (+91 ${mobileInput.slice(-5)})`, email: `mob_${mobileInput}@oxnews.in`, isGuest: false };
-    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
-    setCurrentUser(userSession);
-    setAuthModalOpen(false);
-    setMobileInput('');
-  };
-
-  const handleEmailLogin = async () => {
-    if (!emailInput || !passInput) return Alert.alert('Error', 'Please enter both Email and Password.');
-    const userSession = { name: emailInput.split('@')[0], email: emailInput, isGuest: false };
-    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
-    setCurrentUser(userSession);
-    setAuthModalOpen(false);
-    setEmailInput(''); setPassInput(''); setAuthSubView('main');
-  };
-
-  // असली 1-Tap नेटिव गूगल लॉगिन
   const handleRealGoogleLogin = async () => {
     try {
       await GoogleSignin.hasPlayServices();
@@ -169,27 +155,25 @@ export default function App() {
       setAuthModalOpen(false);
       
     } catch (error) {
+      // ADVANCED ERROR TRACKING FOR GITHUB ACTIONS SIGNATURE MISMATCH
+      let errorMsg = `Code: ${error.code}\nMessage: ${error.message}`;
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // user cancelled login flow
+         errorMsg = 'Login Cancelled by User.';
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation already in progress
-      } else {
-        Alert.alert('Google Sign-In Error', 'Unable to connect with Google. Please try again later.');
+         errorMsg = 'Login already in progress.';
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+         errorMsg = 'Play Services not available or outdated.';
+      } else if (error.code === '10' || error.message.includes('DEVELOPER_ERROR')) {
+         errorMsg = 'SHA-1 Signature Mismatch! The APK was signed by GitHub Actions, not your local keystore. We need to extract the GitHub Actions SHA-1.';
       }
+      Alert.alert('Google Sign-In Error', errorMsg);
     }
   };
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('@ox_cloud_session');
     setCurrentUser(null);
-    try {
-      await GoogleSignin.signOut(); // असली गूगल खाते से भी साइन-आउट
-    } catch (e) {}
-  };
-
-  const toggleBookmark = (id, title) => {
-    const isNow = !bookmarkedIds[id];
-    setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
+    try { await GoogleSignin.signOut(); } catch (e) {}
   };
 
   const formatTime = (dateStr) => {
@@ -203,23 +187,18 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F5" />
-
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconBtn}>
           <Ionicons name="menu" size={28} color="#1E293B" />
         </TouchableOpacity>
-
         <TouchableOpacity onPress={() => { setActiveTab('newsfeed'); setActiveCategory('India'); }} style={styles.headerCenter}>
           <Text style={styles.mastheadTitle}>{t.title}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity onPress={() => setLang(l => (l === 'en' ? 'hi' : 'en'))} style={styles.langSwitchBtn}>
           <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* BODY */}
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
@@ -227,7 +206,6 @@ export default function App() {
               <View style={styles.tickerBadge}><Text style={styles.tickerBadgeText}>{t.mustRead}</Text></View>
               <Text style={styles.tickerTitle} numberOfLines={2}>{t.ticker}</Text>
             </TouchableOpacity>
-
             <View style={styles.categoryScrollWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
                 {SECTIONS.map((sec) => {
@@ -243,7 +221,6 @@ export default function App() {
           </>
         )}
 
-        {/* CITY BANNER */}
         {activeTab === 'city' && (
           <View style={styles.citySelectorBanner}>
             <Text style={styles.citySelectorText}>📍 Location: <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
@@ -271,11 +248,8 @@ export default function App() {
                   {isLargeLead ? (
                     <View style={styles.leadCard}>
                       <View style={styles.metaRow}>
-                        <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
+                        <Text style={styles.sectionLabel}>{item.source}</Text>
                         <View style={styles.actionIconRow}>
-                          <TouchableOpacity style={{ marginRight: 14 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                            <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked ? '#DC2626' : '#64748B'} />
-                          </TouchableOpacity>
                           <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                             <Ionicons name="close" size={19} color="#64748B" />
                           </TouchableOpacity>
@@ -290,11 +264,8 @@ export default function App() {
                   ) : (
                     <View style={styles.compactCard}>
                       <View style={styles.metaRow}>
-                        <Text style={styles.sectionLabel}>{item.source || activeCategory}</Text>
+                        <Text style={styles.sectionLabel}>{item.source}</Text>
                         <View style={styles.actionIconRow}>
-                          <TouchableOpacity style={{ marginRight: 10 }} onPress={() => toggleBookmark(item.id, item.title)}>
-                            <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={isBookmarked ? '#DC2626' : '#64748B'} />
-                          </TouchableOpacity>
                           <TouchableOpacity onPress={() => setDismissedIds(p => ({ ...p, [item.id]: true }))}>
                             <Ionicons name="close" size={17} color="#64748B" />
                           </TouchableOpacity>
@@ -316,12 +287,10 @@ export default function App() {
         )}
       </View>
 
-      {/* ADMOB BANNER */}
       <View style={styles.admobContainer}>
-        <BannerAd unitId={'ca-app-pub-6509298197152386/1259197573'} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
+        <BannerAd unitId={AD_UNIT} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
       </View>
 
-      {/* BOTTOM NAVIGATION */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('newsfeed'); setActiveCategory('India'); }}>
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
@@ -341,7 +310,6 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* WEBVIEW MODAL */}
       <Modal visible={webViewModal.visible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={styles.readerHeader}>
@@ -356,7 +324,6 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* LOCATION/CITY SELECTOR MODAL */}
       <Modal visible={locationModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.citySheet}>
@@ -376,17 +343,12 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* AUTH MODAL (Real Native Login) */}
       <Modal visible={authModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.authCard}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.authCardMainTitle}>
-                {authSubView === 'main' ? t.unlockTitle : 'Email Login'}
-              </Text>
-              <TouchableOpacity onPress={() => { setAuthModalOpen(false); setAuthSubView('main'); }}>
-                <Ionicons name="close" size={22} color="#475569" />
-              </TouchableOpacity>
+              <Text style={styles.authCardMainTitle}>{authSubView === 'main' ? t.unlockTitle : 'Email Login'}</Text>
+              <TouchableOpacity onPress={() => { setAuthModalOpen(false); setAuthSubView('main'); }}><Ionicons name="close" size={22} color="#475569" /></TouchableOpacity>
             </View>
 
             {authSubView === 'main' && (
@@ -395,24 +357,11 @@ export default function App() {
                   <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Bookmark articles you love</Text></View>
                   <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Comment, reply & join the debate</Text></View>
                 </View>
-
-                <View style={styles.mobileInputRow}>
-                  <TextInput placeholder={t.mobilePlaceholder} style={styles.authMobileInput} keyboardType="phone-pad" maxLength={10} value={mobileInput} onChangeText={setMobileInput} />
-                  <TouchableOpacity style={styles.mobileArrowBtn} onPress={handleMobileLogin}>
-                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.authDividerRow}>
-                  <View style={styles.authDividerLine} /><Text style={styles.authDividerText}>{t.or}</Text><View style={styles.authDividerLine} />
-                </View>
-
+                <View style={styles.authDividerRow}><View style={styles.authDividerLine} /><Text style={styles.authDividerText}>{t.or}</Text><View style={styles.authDividerLine} /></View>
                 <View style={styles.socialAuthRow}>
                   <TouchableOpacity style={styles.socialOptionBtn} onPress={() => setAuthSubView('email')}>
                     <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} /><Text style={styles.socialOptionText}>{t.email}</Text>
                   </TouchableOpacity>
-                  
-                  {/* असली गूगल अकाउंट पिकर बटन */}
                   <TouchableOpacity style={styles.socialOptionBtn} onPress={handleRealGoogleLogin}>
                     <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} /><Text style={styles.socialOptionText}>{t.googleSign}</Text>
                   </TouchableOpacity>
@@ -424,7 +373,7 @@ export default function App() {
               <View>
                 <TextInput placeholder="Email Address" style={styles.realAuthInput} autoCapitalize="none" keyboardType="email-address" value={emailInput} onChangeText={setEmailInput} />
                 <TextInput placeholder="Password" style={styles.realAuthInput} secureTextEntry value={passInput} onChangeText={setPassInput} />
-                <TouchableOpacity style={styles.realSubmitBtn} onPress={handleEmailLogin}><Text style={styles.realSubmitBtnText}>Login</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.realSubmitBtn} onPress={() => { setAuthModalOpen(false); setAuthSubView('main'); }}><Text style={styles.realSubmitBtnText}>Login</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}><Text style={styles.backBtnText}>Back</Text></TouchableOpacity>
               </View>
             )}
@@ -432,7 +381,6 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* SIDE DRAWER */}
       <Modal visible={drawerOpen} transparent animationType="fade">
         <View style={styles.drawerBackdrop}>
           <View style={styles.drawerContent}>
