@@ -318,7 +318,7 @@ export default function App() {
 
       {/* ADMOB BANNER */}
       <View style={styles.admobContainer}>
-        <BannerAd unitId={TestIds.BANNER} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
+        <BannerAd unitId={'ca-app-pub-6509298197152386/1259197573'} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
       </View>
 
       {/* BOTTOM NAVIGATION */}
