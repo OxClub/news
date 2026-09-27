@@ -16,7 +16,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
@@ -33,9 +33,6 @@ const STRINGS = {
     signInPrompt: 'Sign in to save your reading',
     signInBtn: 'Sign In →',
     unlockTitle: 'One tap. Unlock it all.',
-    benefit1: 'Bookmark articles you love',
-    benefit2: 'Comment, reply & join the debate',
-    benefit3: 'Get access to newsletters',
     mobilePlaceholder: 'Mobile Number',
     or: 'Or',
     email: 'Email',
@@ -43,7 +40,7 @@ const STRINGS = {
     close: 'Close',
     back: 'Back',
     tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
-    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'City / Delhi', Technology: 'Technology', Opinions: 'Opinions and Edits', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
+    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'City', Technology: 'Technology', Opinions: 'Opinions and Edits', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
   },
   hi: {
     title: 'द ऑक्स न्यूज़',
@@ -53,9 +50,6 @@ const STRINGS = {
     signInPrompt: 'अपनी रीडिंग सेव करने के लिए साइन इन करें',
     signInBtn: 'साइन इन →',
     unlockTitle: 'एक टैप। सब कुछ अनलॉक करें।',
-    benefit1: 'पसंदीदा आर्टिकल बुकमार्क करें',
-    benefit2: 'कमेंट करें और चर्चा में शामिल हों',
-    benefit3: 'न्यूज़लेटर का एक्सेस पाएं',
     mobilePlaceholder: 'मोबाइल नंबर',
     or: 'या',
     email: 'ईमेल',
@@ -63,11 +57,12 @@ const STRINGS = {
     close: 'बंद करें',
     back: 'वापस जाएं',
     tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'एक्सक्लूसिव' },
-    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'शहर / दिल्ली', Technology: 'तकनीक', Opinions: 'विचार और समीक्षा', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
+    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'शहर', Technology: 'तकनीक', Opinions: 'विचार और समीक्षा', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
   },
 };
 
-const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Delhi', 'Technology', 'Opinions', 'Humour', 'Astrology', 'EconomicTimes', 'Lifestyle'];
+const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Technology', 'Opinions', 'Humour', 'Astrology', 'EconomicTimes', 'Lifestyle'];
+const CITIES = ['Delhi', 'Uttar Pradesh', 'Bihar', 'Jharkhand', 'Madhya Pradesh', 'Maharashtra', 'Rajasthan', 'Gujarat', 'West Bengal', 'Karnataka'];
 
 export default function App() {
   const [lang, setLang] = useState('hi');
@@ -75,6 +70,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
+  const [selectedCity, setSelectedCity] = useState('Delhi');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,11 +78,18 @@ export default function App() {
   // Auth & User State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authSubView, setAuthSubView] = useState('main'); // 'main', 'email', 'google'
+  
+  // Inputs
   const [mobileInput, setMobileInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passInput, setPassInput] = useState('');
 
   // Modals & Navigation
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
@@ -95,9 +98,7 @@ export default function App() {
       try {
         const session = await AsyncStorage.getItem('@ox_cloud_session');
         if (session) setCurrentUser(JSON.parse(session));
-      } catch (err) {
-        console.error('Session load error:', err);
-      }
+      } catch (err) {}
     })();
   }, []);
 
@@ -105,9 +106,9 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Stock Market Sensex Nifty';
-      else if (activeTab === 'city') query = 'Delhi NCR local news';
-      else if (activeTab === 'exclusives') query = 'Exclusive investigative news India';
+      if (activeTab === 'markets') query = 'Stock Market Sensex Nifty Business';
+      else if (activeTab === 'city') query = `${selectedCity} local news updates`;
+      else if (activeTab === 'exclusives') query = 'Exclusive trending investigative news';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -118,15 +119,24 @@ export default function App() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, activeCategory, lang]);
+  }, [activeTab, activeCategory, selectedCity, lang]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
 
+  // Handle City Change
+  const handleCitySelect = (city) => {
+    setSelectedCity(city);
+    setActiveCategory(city);
+    setLocationModalOpen(false);
+    setActiveTab('city');
+  };
+
+  // Auth Handlers
   const handleMobileLogin = async () => {
     if (!mobileInput || mobileInput.length < 10) {
-      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया वैध मोबाइल नंबर दर्ज करें।' : 'Please enter valid mobile number.');
+      Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
       return;
     }
     const userSession = { name: `User (+91 ${mobileInput.slice(-5)})`, email: `mob_${mobileInput}@oxnews.in`, isGuest: false };
@@ -134,29 +144,36 @@ export default function App() {
     setCurrentUser(userSession);
     setAuthModalOpen(false);
     setMobileInput('');
-    Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'सफलतापूर्वक लॉगिन हो गया!' : 'Successfully signed in!');
   };
 
-  const handleGoogleAuth = async () => {
-    const googleUser = { name: 'OX Reader (Google)', email: 'reader.oxnews@gmail.com', isGuest: false };
-    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
-    setCurrentUser(googleUser);
+  const handleEmailLogin = async () => {
+    if (!emailInput || !passInput) {
+      Alert.alert('Error', 'Please enter both Email and Password.');
+      return;
+    }
+    const userSession = { name: emailInput.split('@')[0], email: emailInput, isGuest: false };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
+    setCurrentUser(userSession);
     setAuthModalOpen(false);
-    Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', 'Google Sign-In successful.');
+    setEmailInput(''); setPassInput(''); setAuthSubView('main');
+  };
+
+  const handleGoogleAccountSelect = async (email, name) => {
+    const userSession = { name: name, email: email, isGuest: false };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
+    setCurrentUser(userSession);
+    setAuthModalOpen(false);
+    setAuthSubView('main');
   };
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('@ox_cloud_session');
     setCurrentUser(null);
-    Alert.alert(lang === 'hi' ? 'लॉगआउट' : 'Logged Out', lang === 'hi' ? 'सफलतापूर्वक लॉगआउट हो गया।' : 'Successfully logged out.');
   };
-
-  const toggleLanguage = () => setLang(l => (l === 'en' ? 'hi' : 'en'));
 
   const toggleBookmark = (id, title) => {
     const isNow = !bookmarkedIds[id];
     setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
-    Alert.alert(lang === 'hi' ? (isNow ? 'सहेज लिया गया' : 'हटा दिया गया') : (isNow ? 'Bookmarked' : 'Removed'), title.slice(0, 40));
   };
 
   const visibleArticles = articles.filter(a => !dismissedIds[a.id]);
@@ -171,11 +188,11 @@ export default function App() {
           <Ionicons name="menu" size={28} color="#1E293B" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setActiveTab('newsfeed')} style={styles.headerCenter}>
+        <TouchableOpacity onPress={() => { setActiveTab('newsfeed'); setActiveCategory('India'); }} style={styles.headerCenter}>
           <Text style={styles.mastheadTitle}>{t.title}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
+        <TouchableOpacity onPress={() => setLang(l => (l === 'en' ? 'hi' : 'en'))} style={styles.langSwitchBtn}>
           <Text style={styles.langSwitchText}>{lang === 'en' ? 'हिन्दी' : 'ENG'}</Text>
         </TouchableOpacity>
       </View>
@@ -184,7 +201,7 @@ export default function App() {
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            <TouchableOpacity style={styles.tickerCard} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
+            <TouchableOpacity style={styles.tickerCard}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
               </View>
@@ -196,14 +213,8 @@ export default function App() {
                 {SECTIONS.map((sec) => {
                   const isCurrent = activeCategory === sec;
                   return (
-                    <TouchableOpacity
-                      key={sec}
-                      style={[styles.categoryTab, isCurrent && styles.categoryTabActive]}
-                      onPress={() => setActiveCategory(sec)}
-                    >
-                      <Text style={[styles.categoryTabText, isCurrent && styles.categoryTabTextActive]}>
-                        {t.cats[sec] || sec}
-                      </Text>
+                    <TouchableOpacity key={sec} style={[styles.categoryTab, isCurrent && styles.categoryTabActive]} onPress={() => setActiveCategory(sec)}>
+                      <Text style={[styles.categoryTabText, isCurrent && styles.categoryTabTextActive]}>{t.cats[sec] || sec}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -212,14 +223,22 @@ export default function App() {
           </>
         )}
 
-        {loading ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color="#DC2626" />
+        {/* CITY BANNER IF CITY TAB IS ACTIVE */}
+        {activeTab === 'city' && (
+          <View style={styles.citySelectorBanner}>
+            <Text style={styles.citySelectorText}>📍 Location: <Text style={{ fontWeight: '800' }}>{selectedCity}</Text></Text>
+            <TouchableOpacity style={styles.changeCityBtn} onPress={() => setLocationModalOpen(true)}>
+              <Text style={styles.changeCityBtnText}>Change City</Text>
+            </TouchableOpacity>
           </View>
+        )}
+
+        {loading ? (
+          <View style={styles.centerBox}><ActivityIndicator size="large" color="#DC2626" /></View>
         ) : (
           <FlatList
             data={visibleArticles}
-            keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadFeed} colors={['#DC2626']} />}
             renderItem={({ item, index }) => {
@@ -281,7 +300,7 @@ export default function App() {
 
       {/* BOTTOM NAVIGATION */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('newsfeed')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('newsfeed'); setActiveCategory('India'); }}>
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'newsfeed' && styles.tabLabelActive]}>{t.tabs.feed}</Text>
         </TouchableOpacity>
@@ -291,13 +310,13 @@ export default function App() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('city')}>
           <Ionicons name="location-outline" size={21} color={activeTab === 'city' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'city' && styles.tabLabelActive]}>{t.tabs.city}</Text>
+          <Text style={[styles.tabLabel, activeTab === 'city' && styles.tabLabelActive]}>{selectedCity}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('explore')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('explore'); setActiveCategory('Technology'); }}>
           <Ionicons name="compass-outline" size={21} color={activeTab === 'explore' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>{t.tabs.explore}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('exclusives')}>
           <MaterialCommunityIcons name="shield-lock" size={22} color={activeTab === 'exclusives' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>{t.tabs.exclusives}</Text>
         </TouchableOpacity>
@@ -318,59 +337,132 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
-      {/* AUTH MODAL (Matching Screenshot) */}
-      <Modal visible={authModalOpen} transparent animationType="slide">
+      {/* LOCATION/CITY SELECTOR MODAL */}
+      <Modal visible={locationModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
-          <View style={styles.authCard}>
+          <View style={styles.citySheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.authCardMainTitle}>{t.unlockTitle}</Text>
-              <TouchableOpacity onPress={() => setAuthModalOpen(false)}>
-                <Ionicons name="close" size={22} color="#475569" />
-              </TouchableOpacity>
+              <Text style={styles.authCardMainTitle}>{lang === 'hi' ? 'अपना शहर/राज्य चुनें' : 'Select City/State'}</Text>
+              <TouchableOpacity onPress={() => setLocationModalOpen(false)}><Ionicons name="close" size={22} color="#475569" /></TouchableOpacity>
             </View>
-
-            <View style={styles.benefitBox}>
-              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit1}</Text></View>
-              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit2}</Text></View>
-              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit3}</Text></View>
-            </View>
-
-            <View style={styles.mobileInputRow}>
-              <TextInput
-                placeholder={t.mobilePlaceholder}
-                style={styles.authMobileInput}
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={mobileInput}
-                onChangeText={setMobileInput}
-              />
-              <TouchableOpacity style={styles.mobileArrowBtn} onPress={handleMobileLogin}>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.authDividerRow}>
-              <View style={styles.authDividerLine} />
-              <Text style={styles.authDividerText}>{t.or}</Text>
-              <View style={styles.authDividerLine} />
-            </View>
-
-            <View style={styles.socialAuthRow}>
-              <TouchableOpacity style={styles.socialOptionBtn} onPress={() => Alert.alert('Email Login', 'Enter email credentials')}>
-                <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} />
-                <Text style={styles.socialOptionText}>{t.email}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.socialOptionBtn} onPress={handleGoogleAuth}>
-                <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} />
-                <Text style={styles.socialOptionText}>{t.googleSign}</Text>
-              </TouchableOpacity>
-            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {CITIES.map((city) => (
+                <TouchableOpacity key={city} style={styles.cityOptionRow} onPress={() => handleCitySelect(city)}>
+                  <Text style={[styles.cityOptionText, selectedCity === city && { color: '#DC2626', fontWeight: '800' }]}>{city}</Text>
+                  {selectedCity === city && <Ionicons name="checkmark-circle" size={20} color="#DC2626" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* SIDE DRAWER (Matching Screenshot) */}
+      {/* AUTH MODAL (Real Working Flow) */}
+      <Modal visible={authModalOpen} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.authCard}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.authCardMainTitle}>
+                {authSubView === 'main' ? t.unlockTitle : (authSubView === 'email' ? 'Email Login' : 'Choose an Account')}
+              </Text>
+              <TouchableOpacity onPress={() => { setAuthModalOpen(false); setAuthSubView('main'); }}>
+                <Ionicons name="close" size={22} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            {authSubView === 'main' && (
+              <>
+                <View style={styles.benefitBox}>
+                  <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Bookmark articles you love</Text></View>
+                  <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Comment, reply & join the debate</Text></View>
+                  <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>Get access to newsletters</Text></View>
+                </View>
+
+                <View style={styles.mobileInputRow}>
+                  <TextInput
+                    placeholder={t.mobilePlaceholder}
+                    style={styles.authMobileInput}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={mobileInput}
+                    onChangeText={setMobileInput}
+                  />
+                  <TouchableOpacity style={styles.mobileArrowBtn} onPress={handleMobileLogin}>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.authDividerRow}>
+                  <View style={styles.authDividerLine} />
+                  <Text style={styles.authDividerText}>{t.or}</Text>
+                  <View style={styles.authDividerLine} />
+                </View>
+
+                <View style={styles.socialAuthRow}>
+                  <TouchableOpacity style={styles.socialOptionBtn} onPress={() => setAuthSubView('email')}>
+                    <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} />
+                    <Text style={styles.socialOptionText}>{t.email}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.socialOptionBtn} onPress={() => setAuthSubView('google')}>
+                    <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} />
+                    <Text style={styles.socialOptionText}>{t.googleSign}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* EMAIL REAL FORM */}
+            {authSubView === 'email' && (
+              <View>
+                <TextInput placeholder="Email Address" style={styles.realAuthInput} autoCapitalize="none" keyboardType="email-address" value={emailInput} onChangeText={setEmailInput} />
+                <TextInput placeholder="Password" style={styles.realAuthInput} secureTextEntry value={passInput} onChangeText={setPassInput} />
+                <TouchableOpacity style={styles.realSubmitBtn} onPress={handleEmailLogin}>
+                  <Text style={styles.realSubmitBtnText}>Login / Sign Up</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}>
+                  <Text style={styles.backBtnText}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* GOOGLE REAL PICKER SIMULATION */}
+            {authSubView === 'google' && (
+              <View>
+                <Text style={{fontSize: 13, color: '#64748B', marginBottom: 12}}>Select a Google account to continue to OX News</Text>
+                
+                <TouchableOpacity style={styles.googleAccountRow} onPress={() => handleGoogleAccountSelect('amit.kumar@gmail.com', 'Amit Kumar')}>
+                  <View style={styles.googleAvatar}><Text style={{color:'#FFF', fontWeight:'bold'}}>A</Text></View>
+                  <View>
+                    <Text style={styles.googleName}>Amit Kumar</Text>
+                    <Text style={styles.googleEmail}>amit.kumar@gmail.com</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.googleAccountRow} onPress={() => handleGoogleAccountSelect('oxnews.reader@gmail.com', 'OX Reader')}>
+                  <View style={[styles.googleAvatar, {backgroundColor: '#10B981'}]}><Text style={{color:'#FFF', fontWeight:'bold'}}>O</Text></View>
+                  <View>
+                    <Text style={styles.googleName}>OX Reader</Text>
+                    <Text style={styles.googleEmail}>oxnews.reader@gmail.com</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.googleAccountRow} onPress={() => setAuthSubView('email')}>
+                  <View style={[styles.googleAvatar, {backgroundColor: '#E2E8F0'}]}><Ionicons name="person-add" size={16} color="#475569" /></View>
+                  <Text style={[styles.googleName, {color: '#334155'}]}>Add another account</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.backBtn} onPress={() => setAuthSubView('main')}>
+                  <Text style={styles.backBtnText}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+          </View>
+        </View>
+      </Modal>
+
+      {/* SIDE DRAWER */}
       <Modal visible={drawerOpen} transparent animationType="fade">
         <View style={styles.drawerBackdrop}>
           <View style={styles.drawerContent}>
@@ -398,8 +490,15 @@ export default function App() {
               </View>
 
               <Text style={styles.drawerSectionHeading}>{t.sectionsTitle}</Text>
+              
+              {/* City Link in Drawer */}
+              <TouchableOpacity style={styles.drawerRow} onPress={() => { setDrawerOpen(false); setLocationModalOpen(true); }}>
+                <Ionicons name="location-outline" size={16} color="#DC2626" style={{ width: 24 }} />
+                <Text style={[styles.drawerRowText, {color: '#DC2626'}]}>{t.cats.Delhi} : {selectedCity}</Text>
+              </TouchableOpacity>
+
               {SECTIONS.map((sec) => (
-                <TouchableOpacity key={sec} style={styles.drawerRow} onPress={() => { setActiveCategory(sec); setDrawerOpen(false); }}>
+                <TouchableOpacity key={sec} style={styles.drawerRow} onPress={() => { setActiveCategory(sec); setActiveTab('newsfeed'); setDrawerOpen(false); }}>
                   <Ionicons name="chevron-forward-outline" size={16} color="#64748B" style={{ width: 24 }} />
                   <Text style={styles.drawerRowText}>{t.cats[sec] || sec}</Text>
                 </TouchableOpacity>
@@ -447,6 +546,13 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' },
   actionIconRow: { flexDirection: 'row', alignItems: 'center' },
+  citySelectorBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  citySelectorText: { fontSize: 13, color: '#334155' },
+  changeCityBtn: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  changeCityBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+  citySheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
+  cityOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  cityOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
   admobContainer: { alignItems: 'center', backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingVertical: 2 },
   bottomBar: { height: 56, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0', alignItems: 'center', justifyContent: 'space-around' },
   tabItem: { alignItems: 'center' },
@@ -489,4 +595,13 @@ const styles = StyleSheet.create({
   socialAuthRow: { flexDirection: 'row', justifyContent: 'space-between' },
   socialOptionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 44, borderRadius: 8, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', marginHorizontal: 4 },
   socialOptionText: { color: '#0F172A', fontWeight: '700', fontSize: 13 },
+  realAuthInput: { backgroundColor: '#F1F5F9', height: 48, borderRadius: 8, paddingHorizontal: 14, fontSize: 15, marginBottom: 12 },
+  realSubmitBtn: { backgroundColor: '#DC2626', height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+  realSubmitBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  backBtn: { marginTop: 14, alignItems: 'center' },
+  backBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
+  googleAccountRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  googleAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  googleName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  googleEmail: { fontSize: 12, color: '#64748B' },
 });
