@@ -7,10 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import mobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { getHeadlines } from './src/api/newsApi';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const AD_UNIT = __DEV__ ? TestIds.BANNER : 'ca-app-pub-6509298197152386/1259197573';
 
 const STRINGS = {
@@ -75,7 +75,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authType, setAuthType] = useState('main'); // main, email, phone
+  const [authType, setAuthType] = useState('main');
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
 
   const [inputVal, setInputVal] = useState('');
@@ -112,8 +112,9 @@ export default function App() {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      await AsyncStorage.setItem('@ox_user', JSON.stringify(userInfo.user));
-      setCurrentUser(userInfo.user);
+      const user = userInfo.user || userInfo;
+      await AsyncStorage.setItem('@ox_user', JSON.stringify(user));
+      setCurrentUser(user);
       setAuthModalOpen(false);
     } catch (error) {
       Alert.alert('Google Sign-In Error', `Code: ${error.code}\nMessage: ${error.message}`);
@@ -227,7 +228,6 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
       
-      {/* Header with Menu & 3-Dots */}
       <View style={styles.header}>
         <View style={{flexDirection: 'row', alignItems: 'center'}}>
           <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.iconBtn}>
@@ -298,7 +298,6 @@ export default function App() {
 
       <BannerAd unitId={AD_UNIT} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
 
-      {/* Advanced Bottom Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.bottomTab} onPress={() => {setActiveTab('home'); setActiveCatId('breaking');}}>
           <Ionicons name="home" size={24} color={activeTab === 'home' ? '#DC2626' : '#64748B'} />
@@ -361,8 +360,6 @@ const styles = StyleSheet.create({
   bottomBar: { flexDirection: 'row', backgroundColor: '#FFF', height: 65, borderTopWidth: 1, borderTopColor: '#E2E8F0', justifyContent: 'space-around', alignItems: 'center' },
   bottomTab: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   bottomTabText: { fontSize: 12, color: '#64748B', marginTop: 6, fontWeight: '700' },
-  
-  // Drawer Styles
   drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row' },
   drawerContent: { width: width * 0.78, backgroundColor: '#FFF', height: '100%' },
   profileBox: { backgroundColor: '#F8FAFC', padding: 24, paddingTop: 40, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
@@ -378,8 +375,6 @@ const styles = StyleSheet.create({
   drawerItemTextActive: { color: '#DC2626', fontWeight: '900' },
   drawerCloseBtn: { padding: 20, backgroundColor: '#F1F5F9', alignItems: 'center' },
   drawerCloseText: { fontSize: 17, fontWeight: 'bold', color: '#0F172A' },
-  
-  // Auth Modal Styles
   authBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   authContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   authHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
@@ -392,7 +387,6 @@ const styles = StyleSheet.create({
   inputField: { backgroundColor: '#F1F5F9', padding: 14, borderRadius: 10, fontSize: 16, marginBottom: 14, color: '#0F172A' },
   submitBtn: { backgroundColor: '#DC2626', padding: 16, borderRadius: 10, alignItems: 'center', marginTop: 10, elevation: 2 },
   submitBtnText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  
   readerHeader: { height: 60, justifyContent: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', elevation: 2 },
   readerBackText: { fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' }
