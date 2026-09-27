@@ -16,7 +16,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
@@ -28,43 +28,46 @@ const STRINGS = {
   en: {
     title: 'THE OX NEWS',
     mustRead: 'MUST READ',
-    ticker: 'Cyber Security Alert: New financial malware targeting Indian banking portals.',
-    sectionsTitle: 'SECTIONS',
-    shortcuts: 'STATE & CITIES',
-    epaper: 'ePaper',
-    changeCity: 'Select State / City',
-    isThisCity: 'Current Location:',
-    subscribe: 'SUBSCRIBE',
-    marketPromo: 'Month End Offer: Flat 45% Off on Pro Markets',
+    ticker: 'Live Wire: Thousands of real-time multi-language updates streaming now.',
+    sectionsTitle: 'Sections',
+    signInPrompt: 'Sign in to save your reading',
+    signInBtn: 'Sign In →',
+    unlockTitle: 'One tap. Unlock it all.',
+    benefit1: 'Bookmark articles you love',
+    benefit2: 'Comment, reply & join the debate',
+    benefit3: 'Get access to newsletters',
+    mobilePlaceholder: 'Mobile Number',
+    or: 'Or',
+    email: 'Email',
+    googleSign: 'Sign In',
     close: 'Close',
     back: 'Back',
-    tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'States', explore: 'Explore', exclusives: 'Cyber Sec' },
-    cats: { India: 'India', CyberSec: 'Cyber Security', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Technology: 'Tech', Science: 'Science' },
+    tabs: { feed: 'Newsfeed', markets: 'Markets', city: 'City', explore: 'Explore', exclusives: 'Exclusives' },
+    cats: { India: 'India', World: 'World', Sports: 'Sports', Entertainment: 'Entertainment', Business: 'Business', Delhi: 'City / Delhi', Technology: 'Technology', Opinions: 'Opinions and Edits', Humour: 'Humour', Astrology: 'Astrology', EconomicTimes: 'Economic Times', Lifestyle: 'Lifestyle' },
   },
   hi: {
     title: 'द ऑक्स न्यूज़',
     mustRead: 'ज़रूर पढ़ें',
-    ticker: 'साइबर सुरक्षा चेतावनी: भारतीय बैंकिंग पोर्टल्स को निशाना बनाने वाला नया मैलवेयर पकड़ा गया।',
-    sectionsTitle: 'प्रमुख श्रेणियां',
-    shortcuts: 'राज्य एवं शहर',
-    epaper: 'ई-पेपर',
-    changeCity: 'राज्य/शहर बदलें',
-    isThisCity: 'वर्तमान क्षेत्र:',
-    subscribe: 'सब्सक्राइब',
-    marketPromo: 'महीने का विशेष ऑफर: मार्केट प्रो पर 45% छूट',
+    ticker: 'लाइव वायर: हजारों रियल-टाइम बहुभाषी अपडेट्स लगातार प्रसारित हो रहे हैं।',
+    sectionsTitle: 'सेक्शंस',
+    signInPrompt: 'अपनी रीडिंग सेव करने के लिए साइन इन करें',
+    signInBtn: 'साइन इन →',
+    unlockTitle: 'एक टैप। सब कुछ अनलॉक करें।',
+    benefit1: 'पसंदीदा आर्टिकल बुकमार्क करें',
+    benefit2: 'कमेंट करें और चर्चा में शामिल हों',
+    benefit3: 'न्यूज़लेटर का एक्सेस पाएं',
+    mobilePlaceholder: 'मोबाइल नंबर',
+    or: 'या',
+    email: 'ईमेल',
+    googleSign: 'साइन इन',
     close: 'बंद करें',
     back: 'वापस जाएं',
-    tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'राज्य', explore: 'एक्सप्लोर', exclusives: 'साइबर सुरक्षा' },
-    cats: { India: 'भारत', CyberSec: 'साइबर सुरक्षा', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Technology: 'तकनीक', Science: 'विज्ञान' },
+    tabs: { feed: 'न्यूज़फ़ीड', markets: 'बाज़ार', city: 'शहर', explore: 'एक्सप्लोर', exclusives: 'एक्सक्लूसिव' },
+    cats: { India: 'भारत', World: 'विश्व', Sports: 'खेल', Entertainment: 'मनोरंजन', Business: 'व्यापार', Delhi: 'शहर / दिल्ली', Technology: 'तकनीक', Opinions: 'विचार और समीक्षा', Humour: 'हास्य', Astrology: 'राशिफल', EconomicTimes: 'इकोनॉमिक टाइम्स', Lifestyle: 'लाइफस्टाइल' },
   },
 };
 
-const SECTIONS = ['India', 'CyberSec', 'Sports', 'Entertainment', 'Business', 'Technology', 'Science'];
-const INDIAN_STATES_CITIES = [
-  'Delhi', 'Uttar Pradesh', 'Bihar', 'Jharkhand', 'Madhya Pradesh', 
-  'Maharashtra', 'Rajasthan', 'Punjab', 'Haryana', 'West Bengal', 
-  'Karnataka', 'Tamil Nadu', 'Gujarat', 'Kerala', 'Odisha'
-];
+const SECTIONS = ['India', 'World', 'Sports', 'Entertainment', 'Business', 'Delhi', 'Technology', 'Opinions', 'Humour', 'Astrology', 'EconomicTimes', 'Lifestyle'];
 
 export default function App() {
   const [lang, setLang] = useState('hi');
@@ -72,27 +75,18 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('newsfeed');
   const [activeCategory, setActiveCategory] = useState('India');
-  const [selectedLocation, setSelectedLocation] = useState('Bihar');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Cloud & Auth State
+  // Auth & User State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup'
-  const [authName, setAuthName] = useState('');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
+  const [mobileInput, setMobileInput] = useState('');
 
   // Modals & Navigation
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
-  const [activeFeatureScreen, setActiveFeatureScreen] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [moreModalOpen, setMoreModalOpen] = useState(false);
-  const [locationModalOpen, setLocationModalOpen] = useState(false);
-
-  // Article State
   const [bookmarkedIds, setBookmarkedIds] = useState({});
   const [dismissedIds, setDismissedIds] = useState({});
 
@@ -100,9 +94,7 @@ export default function App() {
     (async () => {
       try {
         const session = await AsyncStorage.getItem('@ox_cloud_session');
-        if (session) {
-          setCurrentUser(JSON.parse(session));
-        }
+        if (session) setCurrentUser(JSON.parse(session));
       } catch (err) {
         console.error('Session load error:', err);
       }
@@ -113,9 +105,9 @@ export default function App() {
     try {
       setLoading(true);
       let query = activeCategory;
-      if (activeTab === 'markets') query = 'Stock Market India';
-      else if (activeTab === 'delhi') query = selectedLocation + ' news';
-      else if (activeTab === 'exclusives') query = 'Cyber security hacking India';
+      if (activeTab === 'markets') query = 'Stock Market Sensex Nifty';
+      else if (activeTab === 'city') query = 'Delhi NCR local news';
+      else if (activeTab === 'exclusives') query = 'Exclusive investigative news India';
       else if (activeTab === 'explore') query = activeCategory;
 
       const data = await getHeadlines(query, lang);
@@ -126,97 +118,31 @@ export default function App() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, activeCategory, selectedLocation, lang]);
+  }, [activeTab, activeCategory, lang]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
 
-  // Automatic Google Account Auto-Fetch Simulation for One-Click Login
-  const handleAutoGoogleSignIn = async () => {
-    try {
-      // Automatically retrieves primary registered Google account on device
-      const autoGoogleUser = {
-        name: 'अमित कुमार (Google Verified)',
-        email: 'amit.official.news@gmail.com',
-        isGuest: false,
-        provider: 'Google',
-      };
-      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(autoGoogleUser));
-      setCurrentUser(autoGoogleUser);
-      setAuthModalOpen(false);
-      Alert.alert(
-        lang === 'hi' ? 'गूगल लॉगिन सफल' : 'Google Sign-In Successful',
-        lang === 'hi' ? 'आपके प्राइमरी गूगल अकाउंट (amit.official.news@gmail.com) से सफलतापूर्वक लॉगिन हो गया है।' : 'Successfully signed in with your primary Google account.'
-      );
-    } catch (e) {
-      Alert.alert('Google Auth Error', e.message);
-    }
-  };
-
-  const handleCloudSignUp = async () => {
-    if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
-      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया सभी विवरण भरें।' : 'Please fill in all fields.');
+  const handleMobileLogin = async () => {
+    if (!mobileInput || mobileInput.length < 10) {
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'कृपया वैध मोबाइल नंबर दर्ज करें।' : 'Please enter valid mobile number.');
       return;
     }
-    try {
-      const emailKey = authEmail.trim().toLowerCase();
-      const existing = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
-      if (existing) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'इस ईमेल से अकाउंट पहले से मौजूद है।' : 'Account already exists.');
-        return;
-      }
-      const userData = { name: authName.trim(), email: emailKey, password: authPassword.trim() };
-      await AsyncStorage.setItem(`@ox_db_${emailKey}`, JSON.stringify(userData));
-
-      const session = { name: userData.name, email: userData.email, isGuest: false };
-      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(session));
-      setCurrentUser(session);
-      setAuthModalOpen(false);
-      setAuthName('');
-      setAuthEmail('');
-      setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'खाता सफलतापूर्वक बन गया है!' : 'Account created!');
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    }
-  };
-
-  const handleCloudLogIn = async () => {
-    if (!authEmail.trim() || !authPassword.trim()) {
-      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'ईमेल और पासवर्ड दर्ज करें।' : 'Please enter email and password.');
-      return;
-    }
-    try {
-      const emailKey = authEmail.trim().toLowerCase();
-      const record = await AsyncStorage.getItem(`@ox_db_${emailKey}`);
-      if (!record) {
-        Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', lang === 'hi' ? 'खाता नहीं मिला।' : 'Account not found.');
-        return;
-      }
-      const parsed = JSON.parse(record);
-      if (parsed.password !== authPassword.trim()) {
-        Alert.alert(lang === 'hi' ? 'गलत पासवर्ड' : 'Invalid Password', lang === 'hi' ? 'पासवर्ड गलत है।' : 'Incorrect password.');
-        return;
-      }
-      const session = { name: parsed.name, email: parsed.email, isGuest: false };
-      await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(session));
-      setCurrentUser(session);
-      setAuthModalOpen(false);
-      setAuthEmail('');
-      setAuthPassword('');
-      Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', `${parsed.name}!`);
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    }
-  };
-
-  const handleAnonymousGuest = async () => {
-    const guestSession = { name: lang === 'hi' ? 'अनाम पाठक (Guest)' : 'Anonymous Guest', email: lang === 'hi' ? 'अनाम सत्र सक्रिय' : 'Guest Session Active', isGuest: true };
-    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(guestSession));
-    setCurrentUser(guestSession);
+    const userSession = { name: `User (+91 ${mobileInput.slice(-5)})`, email: `mob_${mobileInput}@oxnews.in`, isGuest: false };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(userSession));
+    setCurrentUser(userSession);
     setAuthModalOpen(false);
-    Alert.alert(lang === 'hi' ? 'अनाम मोड' : 'Guest Mode', lang === 'hi' ? 'आप अनाम रूप से ब्राउज़ कर रहे हैं।' : 'Browsing anonymously.');
+    setMobileInput('');
+    Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'सफलतापूर्वक लॉगिन हो गया!' : 'Successfully signed in!');
+  };
+
+  const handleGoogleAuth = async () => {
+    const googleUser = { name: 'OX Reader (Google)', email: 'reader.oxnews@gmail.com', isGuest: false };
+    await AsyncStorage.setItem('@ox_cloud_session', JSON.stringify(googleUser));
+    setCurrentUser(googleUser);
+    setAuthModalOpen(false);
+    Alert.alert(lang === 'hi' ? 'स्वागत है' : 'Welcome', 'Google Sign-In successful.');
   };
 
   const handleLogout = async () => {
@@ -225,20 +151,12 @@ export default function App() {
     Alert.alert(lang === 'hi' ? 'लॉगआउट' : 'Logged Out', lang === 'hi' ? 'सफलतापूर्वक लॉगआउट हो गया।' : 'Successfully logged out.');
   };
 
-  const toggleLanguage = () => {
-    setLang(l => (l === 'en' ? 'hi' : 'en'));
-  };
+  const toggleLanguage = () => setLang(l => (l === 'en' ? 'hi' : 'en'));
 
   const toggleBookmark = (id, title) => {
     const isNow = !bookmarkedIds[id];
     setBookmarkedIds(prev => ({ ...prev, [id]: isNow }));
     Alert.alert(lang === 'hi' ? (isNow ? 'सहेज लिया गया' : 'हटा दिया गया') : (isNow ? 'Bookmarked' : 'Removed'), title.slice(0, 40));
-  };
-
-  const openFullArticle = (article) => {
-    if (article.url) {
-      setWebViewModal({ visible: true, url: article.url, title: article.title });
-    }
   };
 
   const visibleArticles = articles.filter(a => !dismissedIds[a.id]);
@@ -266,50 +184,11 @@ export default function App() {
       <View style={styles.container}>
         {activeTab === 'newsfeed' && (
           <>
-            <View style={styles.quickServicesBar}>
-              <TouchableOpacity style={styles.quickServiceItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
-                <View style={styles.quickIconCircle}>
-                  <MaterialCommunityIcons name="shield-lock" size={20} color="#DC2626" />
-                </View>
-                <Text style={styles.quickServiceText}>CyberSec</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('quiz')}>
-                <View style={styles.quickIconCircle}>
-                  <MaterialCommunityIcons name="puzzle-outline" size={20} color="#9A3412" />
-                </View>
-                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'खेल' : 'Games'}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('aiq')}>
-                <View style={styles.quickIconCircle}>
-                  <Text style={styles.aiqIconText}>AIQ</Text>
-                </View>
-                <Text style={styles.quickServiceText}>AIQ Test</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setActiveFeatureScreen('awards')}>
-                <View style={styles.quickIconCircle}>
-                  <Ionicons name="trophy-outline" size={20} color="#9A3412" />
-                </View>
-                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'अवार्ड्स' : 'Awards'}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickServiceItem} onPress={() => setMoreModalOpen(true)}>
-                <View style={styles.quickIconCircle}>
-                  <Ionicons name="apps-outline" size={20} color="#9A3412" />
-                </View>
-                <Text style={styles.quickServiceText}>{lang === 'hi' ? 'अधिक' : 'More'}</Text>
-              </TouchableOpacity>
-            </View>
-
             <TouchableOpacity style={styles.tickerCard} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
               <View style={styles.tickerBadge}>
                 <Text style={styles.tickerBadgeText}>{t.mustRead}</Text>
               </View>
-              <Text style={styles.tickerTitle} numberOfLines={2}>
-                {t.ticker}
-              </Text>
+              <Text style={styles.tickerTitle} numberOfLines={2}>{t.ticker}</Text>
             </TouchableOpacity>
 
             <View style={styles.categoryScrollWrapper}>
@@ -331,31 +210,6 @@ export default function App() {
               </ScrollView>
             </View>
           </>
-        )}
-
-        {activeTab === 'delhi' && (
-          <View style={styles.citySelectorBanner}>
-            <Text style={styles.citySelectorText}>{t.isThisCity} <Text style={{ fontWeight: '800' }}>{selectedLocation}</Text></Text>
-            <TouchableOpacity style={styles.changeCityBtn} onPress={() => setLocationModalOpen(true)}>
-              <Text style={styles.changeCityBtnText}>{t.changeCity}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {activeTab === 'explore' && (
-          <View style={styles.exploreFilterRow}>
-            {['All', 'CyberSec', 'Investing', 'Technology', 'Science'].map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[styles.explorePill, activeCategory === item && styles.explorePillActive]}
-                onPress={() => setActiveCategory(item === 'All' ? 'India' : item)}
-              >
-                <Text style={[styles.explorePillText, activeCategory === item && styles.explorePillTextActive]}>
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         )}
 
         {loading ? (
@@ -387,12 +241,9 @@ export default function App() {
                           </TouchableOpacity>
                         </View>
                       </View>
-
-                      <TouchableOpacity onPress={() => openFullArticle(item)}>
+                      <TouchableOpacity onPress={() => setWebViewModal({ visible: true, url: item.url, title: item.title })}>
                         <Text style={styles.leadTitle}>{item.title}</Text>
-                        {item.image_url ? (
-                          <Image source={{ uri: item.image_url }} style={styles.leadImage} />
-                        ) : null}
+                        {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.leadImage} /> : null}
                       </TouchableOpacity>
                     </View>
                   ) : (
@@ -408,17 +259,11 @@ export default function App() {
                           </TouchableOpacity>
                         </View>
                       </View>
-                      <TouchableOpacity style={styles.compactRow} onPress={() => openFullArticle(item)}>
+                      <TouchableOpacity style={styles.compactRow} onPress={() => setWebViewModal({ visible: true, url: item.url, title: item.title })}>
                         <View style={styles.compactTextCol}>
                           <Text style={styles.compactTitle} numberOfLines={3}>{item.title}</Text>
                         </View>
-                        {item.image_url ? (
-                          <Image source={{ uri: item.image_url }} style={styles.compactThumb} />
-                        ) : (
-                          <View style={[styles.compactThumb, styles.thumbPlaceholder]}>
-                            <Ionicons name="newspaper-outline" size={24} color="#CBD5E1" />
-                          </View>
-                        )}
+                        {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.compactThumb} /> : null}
                       </TouchableOpacity>
                     </View>
                   )}
@@ -431,11 +276,7 @@ export default function App() {
 
       {/* ADMOB BANNER */}
       <View style={styles.admobContainer}>
-        <BannerAd
-          unitId={TestIds.BANNER}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-        />
+        <BannerAd unitId={TestIds.BANNER} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
       </View>
 
       {/* BOTTOM NAVIGATION */}
@@ -444,22 +285,18 @@ export default function App() {
           <Ionicons name="newspaper-outline" size={21} color={activeTab === 'newsfeed' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'newsfeed' && styles.tabLabelActive]}>{t.tabs.feed}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('markets')}>
           <Ionicons name="trending-up-outline" size={21} color={activeTab === 'markets' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'markets' && styles.tabLabelActive]}>{t.tabs.markets}</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('delhi')}>
-          <Ionicons name="location-outline" size={21} color={activeTab === 'delhi' ? '#DC2626' : '#64748B'} />
-          <Text style={[styles.tabLabel, activeTab === 'delhi' && styles.tabLabelActive]}>{selectedLocation}</Text>
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('city')}>
+          <Ionicons name="location-outline" size={21} color={activeTab === 'city' ? '#DC2626' : '#64748B'} />
+          <Text style={[styles.tabLabel, activeTab === 'city' && styles.tabLabelActive]}>{t.tabs.city}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('explore')}>
           <Ionicons name="compass-outline" size={21} color={activeTab === 'explore' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'explore' && styles.tabLabelActive]}>{t.tabs.explore}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.tabItem} onPress={() => { setActiveTab('exclusives'); loadFeed(); }}>
           <MaterialCommunityIcons name="shield-lock" size={22} color={activeTab === 'exclusives' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.tabLabel, activeTab === 'exclusives' && styles.tabLabelExclusive]}>{t.tabs.exclusives}</Text>
@@ -477,233 +314,63 @@ export default function App() {
             <Text style={styles.readerHeaderTitle} numberOfLines={1}>{webViewModal.title}</Text>
             <View style={{ width: 30 }} />
           </View>
-          {webViewModal.url ? (
-            <WebView source={{ uri: webViewModal.url }} startInLoadingState renderLoading={() => <ActivityIndicator size="large" color="#DC2626" style={{ flex: 1 }} />} />
-          ) : null}
+          {webViewModal.url ? <WebView source={{ uri: webViewModal.url }} startInLoadingState /> : null}
         </SafeAreaView>
       </Modal>
 
-      {/* RASHIFAL MODAL */}
-      <Modal visible={activeFeatureScreen === 'astrology'} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
-          <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
-              <Ionicons name="arrow-back" size={24} color="#0F172A" />
-              <Text style={styles.readerBackText}>{t.back}</Text>
-            </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>{lang === 'hi' ? 'संपूर्ण 12 राशियों का राशिफल' : 'Complete 12 Zodiac Horoscope'}</Text>
-            <View style={{ width: 30 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 16 }}>
-            {[
-              { rashi: 'मेष (Aries)', desc: 'व्यापार में लाभ और करियर में नए उछाल के योग हैं। स्वास्थ्य उत्तम रहेगा।' },
-              { rashi: 'वृषभ (Taurus)', desc: 'धन लाभ के अवसर मिलेंगे। परिवार के साथ धार्मिक यात्रा हो सकती है।' },
-              { rashi: 'मिथुन (Gemini)', desc: 'विद्यार्थियों के लिए समय अनुकूल है। रुका हुआ धन वापस मिल सकता है।' },
-              { rashi: 'कर्क (Cancer)', desc: 'मानसिक शांति बनी रहेगी। सहकर्मियों का पूरा सहयोग प्राप्त होगा।' },
-              { rashi: 'सिंह (Leo)', desc: 'नेतृत्व क्षमता का विकास होगा। उच्च अधिकारियों से सराहना मिलेगी।' },
-              { rashi: 'कन्या (Virgo)', desc: 'निवेश में सावधानी बरतें। स्वास्थ्य को लेकर थोड़ी सतर्कता जरूरी है।' },
-              { rashi: 'तुला (Libra)', desc: 'दांपत्य जीवन में मधुरता आएगी। नए पार्टनरशिप की शुरुआत हो सकती है।' },
-              { rashi: 'वृश्चिक (Scorpio)', desc: 'विरोधी परास्त होंगे। कोर्ट-कचहरी के मामलों में सफलता मिलेगी।' },
-              { rashi: 'धनु (Sagittarius)', desc: 'भाग्य का पूरा साथ मिलेगा। उच्च शिक्षा के लिए विदेश यात्रा के योग हैं।' },
-              { rashi: 'मकर (Capricorn)', desc: 'भूमि या वाहन खरीदने के प्रबल योग बन रहे हैं। खर्चों पर नियंत्रण रखें।' },
-              { rashi: 'कुंभ (Aquarius)', desc: 'रचनात्मक कार्यों में रुचि बढ़ेगी। मित्रों के साथ बेहतरीन समय बीतेगा।' },
-              { rashi: 'मीन (Pisces)', desc: 'आध्यात्मिक झुकाव रहेगा। आर्थिक मामलों में समझदारी से निर्णय लें।' },
-            ].map((item, idx) => (
-              <View key={idx} style={styles.horoscopeCard}>
-                <View style={styles.rashiBadge}><Text style={styles.rashiBadgeText}>{item.rashi}</Text></View>
-                <Text style={styles.horoscopeText}>{item.desc}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* E-PAPER MODAL */}
-      <Modal visible={activeFeatureScreen === 'epaper'} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
-              <Ionicons name="arrow-back" size={24} color="#0F172A" />
-              <Text style={styles.readerBackText}>{t.back}</Text>
-            </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>OX ePaper Digital Edition</Text>
-            <View style={{ width: 30 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 16, alignItems: 'center' }}>
-            <View style={styles.epaperFrontPage}>
-              <Text style={styles.epaperMasthead}>THE OX NEWS</Text>
-              <Text style={styles.epaperSub}>{new Date().toDateString()} • National & Cyber Edition</Text>
-              <View style={styles.epaperDivider} />
-              <Text style={styles.epaperHeadline}>INDIA STRENGTHENS CYBER DEFENSE FRAMEWORK ACROSS ALL STATES</Text>
-              <View style={styles.epaperMockImage}><Ionicons name="newspaper-outline" size={48} color="#94A3B8" /></View>
-              <Text style={styles.epaperBodyText}>Read complete local editions from Bihar, UP, Jharkhand, Delhi and more inside this digital broadsheet replica.</Text>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* AWARDS MODAL */}
-      <Modal visible={activeFeatureScreen === 'awards'} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
-              <Ionicons name="arrow-back" size={24} color="#0F172A" />
-              <Text style={styles.readerBackText}>{t.back}</Text>
-            </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>OX Awards 2026</Text>
-            <View style={{ width: 30 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 16 }}>
-            {['Best Cyber Security Initiative', 'Top Regional News Bureau', 'Digital Innovator of the Year'].map((nom, i) => (
-              <View key={i} style={styles.awardCard}>
-                <Text style={styles.awardCat}>Category {i+1}</Text>
-                <Text style={styles.awardName}>{nom}</Text>
-                <TouchableOpacity style={styles.voteBtn} onPress={() => Alert.alert('Success', 'Vote submitted!')}>
-                  <Text style={styles.voteBtnText}>Vote Now</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* QUIZ MODAL */}
-      <Modal visible={activeFeatureScreen === 'quiz'} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View style={styles.readerHeader}>
-            <TouchableOpacity onPress={() => setActiveFeatureScreen(null)} style={styles.readerBackBtn}>
-              <Ionicons name="arrow-back" size={24} color="#0F172A" />
-              <Text style={styles.readerBackText}>{t.back}</Text>
-            </TouchableOpacity>
-            <Text style={styles.readerHeaderTitle}>Daily Tech & Cyber Quiz</Text>
-            <View style={{ width: 30 }} />
-          </View>
-          <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 12 }}>What is Phishing in Cyber Security?</Text>
-            {['Fraudulent email scam', 'Water sport', 'Network cable type', 'CPU cooling method'].map((ans, i) => (
-              <TouchableOpacity key={i} style={styles.quizFullBtn} onPress={() => Alert.alert(i === 0 ? 'Correct! 🎉' : 'Incorrect!')}>
-                <Text style={styles.quizFullBtnText}>{ans}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* MORE SERVICES MODAL */}
-      <Modal visible={moreModalOpen} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setMoreModalOpen(false)}>
-          <View style={styles.bottomSheetCard}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अन्य सेवाएं' : 'More Services'}</Text>
-              <TouchableOpacity onPress={() => setMoreModalOpen(false)}><Ionicons name="close" size={22} color="#475569" /></TouchableOpacity>
-            </View>
-            <View style={styles.sheetGrid}>
-              {[
-                { title: lang === 'hi' ? 'राशिफल' : 'Astrology', icon: 'compass-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('astrology'); } },
-                { title: lang === 'hi' ? 'ई-पेपर' : 'ePaper', icon: 'newspaper-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('epaper'); } },
-                { title: lang === 'hi' ? 'अवार्ड्स' : 'Awards', icon: 'trophy-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('awards'); } },
-                { title: lang === 'hi' ? 'क्विज़' : 'Quiz', icon: 'puzzle-outline', action: () => { setMoreModalOpen(false); setActiveFeatureScreen('quiz'); } },
-              ].map((item, idx) => (
-                <TouchableOpacity key={idx} style={styles.sheetGridItem} onPress={item.action}>
-                  <View style={styles.quickIconCircle}><MaterialCommunityIcons name={item.icon} size={22} color="#9A3412" /></View>
-                  <Text style={styles.sheetItemText}>{item.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* AUTH MODAL */}
+      {/* AUTH MODAL (Matching Screenshot) */}
       <Modal visible={authModalOpen} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.authCard}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>
-                {authMode === 'login' ? (lang === 'hi' ? 'खाते में प्रवेश करें' : 'Sign In') : (lang === 'hi' ? 'नया खाता बनाएं' : 'Sign Up')}
-              </Text>
+              <Text style={styles.authCardMainTitle}>{t.unlockTitle}</Text>
               <TouchableOpacity onPress={() => setAuthModalOpen(false)}>
                 <Ionicons name="close" size={22} color="#475569" />
               </TouchableOpacity>
             </View>
 
-            {/* ONE-CLICK AUTO GOOGLE SIGN IN */}
-            <TouchableOpacity style={styles.googleSignInBtn} onPress={handleAutoGoogleSignIn}>
-              <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 10 }} />
-              <Text style={styles.googleSignInText}>
-                {lang === 'hi' ? 'गूगल (Google) से एक क्लिक में लॉगिन करें' : 'Sign in with Google (One-Click)'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.authDividerRow}>
-              <View style={styles.authDividerLine} />
-              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या ईमेल से' : 'OR EMAIL'}</Text>
-              <View style={styles.authDividerLine} />
+            <View style={styles.benefitBox}>
+              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit1}</Text></View>
+              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit2}</Text></View>
+              <View style={styles.benefitRow}><Ionicons name="checkmark-circle" size={16} color="#16A34A" /><Text style={styles.benefitText}>{t.benefit3}</Text></View>
             </View>
 
-            {authMode === 'signup' && (
+            <View style={styles.mobileInputRow}>
               <TextInput
-                placeholder={lang === 'hi' ? 'आपका पूरा नाम' : 'Full Name'}
-                style={styles.authInput}
-                value={authName}
-                onChangeText={setAuthName}
+                placeholder={t.mobilePlaceholder}
+                style={styles.authMobileInput}
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={mobileInput}
+                onChangeText={setMobileInput}
               />
-            )}
-
-            <TextInput
-              placeholder={lang === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
-              style={styles.authInput}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={authEmail}
-              onChangeText={setAuthEmail}
-            />
-
-            <TextInput
-              placeholder={lang === 'hi' ? 'पासवर्ड' : 'Password'}
-              style={styles.authInput}
-              secureTextEntry
-              value={authPassword}
-              onChangeText={setAuthPassword}
-            />
-
-            <TouchableOpacity
-              style={styles.authSubmitBtn}
-              onPress={authMode === 'login' ? handleCloudLogIn : handleCloudSignUp}
-            >
-              <Text style={styles.authSubmitBtnText}>
-                {authMode === 'login' ? (lang === 'hi' ? 'लॉगिन करें' : 'Sign In') : (lang === 'hi' ? 'रजिस्टर करें' : 'Sign Up')}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.authToggleRow}>
-              <Text style={{ fontSize: 13, color: '#64748B' }}>
-                {authMode === 'login' ? (lang === 'hi' ? 'नया अकाउंट बनाएं?' : "Don't have an account?") : (lang === 'hi' ? 'पहले से अकाउंट है?' : 'Already have an account?')}
-              </Text>
-              <TouchableOpacity onPress={() => setAuthMode(m => m === 'login' ? 'signup' : 'login')}>
-                <Text style={styles.authToggleBtnText}>
-                  {authMode === 'login' ? (lang === 'hi' ? ' साइन अप' : ' Sign Up') : (lang === 'hi' ? ' लॉगिन' : ' Login')}
-                </Text>
+              <TouchableOpacity style={styles.mobileArrowBtn} onPress={handleMobileLogin}>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.authDividerRow}>
               <View style={styles.authDividerLine} />
-              <Text style={styles.authDividerText}>{lang === 'hi' ? 'या' : 'OR'}</Text>
+              <Text style={styles.authDividerText}>{t.or}</Text>
               <View style={styles.authDividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.guestLoginBtn} onPress={handleAnonymousGuest}>
-              <Ionicons name="person-circle-outline" size={20} color="#334155" style={{ marginRight: 8 }} />
-              <Text style={styles.guestLoginBtnText}>
-                {lang === 'hi' ? 'अनाम (Guest) के रूप में जारी रखें' : 'Continue as Guest (Anonymous)'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.socialAuthRow}>
+              <TouchableOpacity style={styles.socialOptionBtn} onPress={() => Alert.alert('Email Login', 'Enter email credentials')}>
+                <Ionicons name="mail-outline" size={18} color="#0F172A" style={{ marginRight: 6 }} />
+                <Text style={styles.socialOptionText}>{t.email}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.socialOptionBtn} onPress={handleGoogleAuth}>
+                <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 6 }} />
+                <Text style={styles.socialOptionText}>{t.googleSign}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
 
-      {/* SIDE DRAWER */}
+      {/* SIDE DRAWER (Matching Screenshot) */}
       <Modal visible={drawerOpen} transparent animationType="fade">
         <View style={styles.drawerBackdrop}>
           <View style={styles.drawerContent}>
@@ -722,9 +389,9 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <Text style={styles.drawerProfileText}>{lang === 'hi' ? 'गूगल या क्लाउड सिंक के लिए लॉगिन करें' : 'Sign in via Google or Email'}</Text>
+                    <Text style={styles.drawerProfileText}>{t.signInPrompt}</Text>
                     <TouchableOpacity style={styles.signInBtn} onPress={() => { setDrawerOpen(false); setAuthModalOpen(true); }}>
-                      <Text style={styles.signInBtnText}>{lang === 'hi' ? 'लॉगिन / साइन अप →' : 'Sign In / Register →'}</Text>
+                      <Text style={styles.signInBtnText}>{t.signInBtn}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -746,31 +413,6 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* STATE / CITY MODAL */}
-      <Modal visible={locationModalOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.citySheet}>
-            <Text style={styles.sheetTitle}>{lang === 'hi' ? 'अपना राज्य / शहर चुनें' : 'Select State / City'}</Text>
-            <ScrollView style={{ maxHeight: 320 }}>
-              {INDIAN_STATES_CITIES.map((loc) => (
-                <TouchableOpacity
-                  key={loc}
-                  style={styles.cityOptionRow}
-                  onPress={() => {
-                    setSelectedLocation(loc);
-                    setLocationModalOpen(false);
-                    setActiveTab('delhi');
-                  }}
-                >
-                  <Text style={[styles.cityOptionText, selectedLocation === loc && { color: '#DC2626', fontWeight: '800' }]}>{loc}</Text>
-                  {selectedLocation === loc && <Ionicons name="checkmark-circle" size={20} color="#DC2626" />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
     </SafeAreaView>
   );
 }
@@ -783,11 +425,6 @@ const styles = StyleSheet.create({
   iconBtn: { padding: 4 },
   langSwitchBtn: { backgroundColor: '#0F172A', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   langSwitchText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-  quickServicesBar: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#FFF8F5', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#FEE2E2' },
-  quickServiceItem: { alignItems: 'center' },
-  quickIconCircle: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', elevation: 2 },
-  aiqIconText: { fontSize: 12, fontWeight: '800', color: '#9A3412' },
-  quickServiceText: { fontSize: 11, marginTop: 4, color: '#475569', fontWeight: '600' },
   tickerCard: { marginHorizontal: 14, marginTop: 10, padding: 10, backgroundColor: '#FFF5F5', borderRadius: 10, borderWidth: 1, borderColor: '#FECACA' },
   tickerBadge: { alignSelf: 'flex-start', backgroundColor: '#DC2626', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
   tickerBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
@@ -807,19 +444,9 @@ const styles = StyleSheet.create({
   compactTextCol: { flex: 1, paddingRight: 12 },
   compactTitle: { fontSize: 15, fontWeight: '700', lineHeight: 21, color: '#1E293B' },
   compactThumb: { width: 88, height: 66, borderRadius: 6, backgroundColor: '#F1F5F9' },
-  thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' },
   actionIconRow: { flexDirection: 'row', alignItems: 'center' },
-  citySelectorBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  citySelectorText: { fontSize: 13, color: '#334155' },
-  changeCityBtn: { backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  changeCityBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-  exploreFilterRow: { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  explorePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F1F5F9', marginRight: 8 },
-  explorePillActive: { backgroundColor: '#0F172A' },
-  explorePillText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
-  explorePillTextActive: { color: '#FFFFFF' },
   admobContainer: { alignItems: 'center', backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingVertical: 2 },
   bottomBar: { height: 56, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0', alignItems: 'center', justifyContent: 'space-around' },
   tabItem: { alignItems: 'center' },
@@ -828,12 +455,6 @@ const styles = StyleSheet.create({
   tabLabelExclusive: { color: '#DC2626', fontWeight: '800' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  bottomSheetCard: { backgroundColor: '#FFF8F5', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, width: '100%', position: 'absolute', bottom: 0 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sheetTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
-  sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  sheetGridItem: { width: '23%', alignItems: 'center', marginBottom: 16 },
-  sheetItemText: { fontSize: 11, marginTop: 6, color: '#475569', textAlign: 'center', fontWeight: '600' },
   drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', flexDirection: 'row' },
   drawerContent: { width: width * 0.75, backgroundColor: '#FFFFFF', height: '100%', padding: 18, justifyContent: 'space-between' },
   drawerProfileBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 16, marginBottom: 16, alignItems: 'center' },
@@ -848,44 +469,24 @@ const styles = StyleSheet.create({
   drawerSectionHeading: { fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 10, marginTop: 6 },
   drawerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   drawerRowText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  drawerDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
   drawerCloseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  citySheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: width * 0.85 },
-  cityOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  cityOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
   readerHeader: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   readerBackBtn: { flexDirection: 'row', alignItems: 'center' },
   readerBackText: { fontSize: 14, fontWeight: '700', marginLeft: 6, color: '#0F172A' },
   readerHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center', marginHorizontal: 12 },
-  horoscopeCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 1 },
-  rashiBadge: { alignSelf: 'flex-start', backgroundColor: '#DC2626', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
-  rashiBadgeText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
-  horoscopeText: { fontSize: 14, color: '#475569', lineHeight: 22 },
-  epaperFrontPage: { backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, width: '100%', elevation: 2 },
-  epaperMasthead: { fontSize: 28, fontWeight: '900', fontFamily: 'serif', textAlign: 'center' },
-  epaperSub: { fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 4 },
-  epaperDivider: { height: 2, backgroundColor: '#000', marginVertical: 10 },
-  epaperHeadline: { fontSize: 17, fontWeight: '900', textAlign: 'center', marginVertical: 10 },
-  epaperMockImage: { height: 140, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderRadius: 6, marginVertical: 10 },
-  epaperBodyText: { fontSize: 13, color: '#475569', lineHeight: 20, textAlign: 'justify' },
-  awardCard: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-  awardCat: { fontSize: 12, fontWeight: '800', color: '#DC2626', textTransform: 'uppercase' },
-  awardName: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginVertical: 4 },
-  voteBtn: { backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start', marginTop: 8 },
-  voteBtnText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
-  quizFullBtn: { backgroundColor: '#F1F5F9', padding: 16, borderRadius: 10, marginBottom: 12 },
-  quizFullBtnText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
   authCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 22, width: width * 0.88 },
-  authInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, height: 46, paddingHorizontal: 14, fontSize: 15, marginBottom: 12 },
-  authSubmitBtn: { backgroundColor: '#DC2626', height: 46, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
-  authSubmitBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  authToggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14 },
-  authToggleBtnText: { color: '#2563EB', fontWeight: '700', fontSize: 13 },
-  authDividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 14 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  authCardMainTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
+  benefitBox: { marginBottom: 16 },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  benefitText: { fontSize: 13, color: '#334155', marginLeft: 8, fontWeight: '600' },
+  mobileInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 12, height: 48, marginBottom: 14 },
+  authMobileInput: { flex: 1, fontSize: 15, color: '#0F172A' },
+  mobileArrowBtn: { backgroundColor: '#0F172A', width: 36, height: 36, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
+  authDividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
   authDividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
   authDividerText: { marginHorizontal: 10, color: '#94A3B8', fontSize: 12, fontWeight: '700' },
-  guestLoginBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 44, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  guestLoginBtnText: { color: '#334155', fontWeight: '700', fontSize: 13 },
-  googleSignInBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 48, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', marginBottom: 6, elevation: 1 },
-  googleSignInText: { color: '#1E293B', fontWeight: '700', fontSize: 14, marginLeft: 8 },
+  socialAuthRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  socialOptionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 44, borderRadius: 8, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', marginHorizontal: 4 },
+  socialOptionText: { color: '#0F172A', fontWeight: '700', fontSize: 13 },
 });
