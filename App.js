@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   SafeAreaView, View, Text, FlatList, ScrollView, TouchableOpacity, Image, Modal,
-  ActivityIndicator, RefreshControl, StyleSheet, StatusBar, Dimensions, Alert, TextInput, KeyboardAvoidingView, Platform
+  ActivityIndicator, RefreshControl, StyleSheet, StatusBar, Dimensions, Alert, TextInput, KeyboardAvoidingView, Platform, Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
@@ -17,19 +17,19 @@ const AD_UNIT = __DEV__ ? TestIds.BANNER : 'ca-app-pub-6509298197152386/12591975
 const STRINGS = {
   hi: {
     appName: 'द ऑक्स न्यूज़', liveLabel: 'LIVE', tickerText: 'दुनिया भर की ताज़ा और ब्रेकिंग खबरें, सीधे आपके फोन पर।',
-    home: 'होम', state: 'राज्य', explore: 'एक्सप्लोर', guest: 'गेस्ट यूज़र', loginText: 'लॉगिन / रजिस्टर करें', 
-    logout: 'लॉगआउट करें', close: 'बंद करें', back: 'वापस', allCats: 'सभी कैटेगरीज', langToggle: 'ENG',
-    authTitle: 'एक टैप। सब कुछ अनलॉक करें।', emailLogin: 'ईमेल से जारी रखें', phoneLogin: 'मोबाइल नंबर से जारी रखें',
+    home: 'होम', state: 'राज्य', search: 'खोजें', searchHint: 'कोई भी विषय या खबर खोजें...', guest: 'गेस्ट यूज़र', 
+    loginText: 'लॉगिन / रजिस्टर करें', logout: 'लॉगआउट करें', close: 'बंद करें', back: 'वापस', allCats: 'सभी कैटेगरीज', 
+    langToggle: 'ENG', authTitle: 'एक टैप। सब कुछ अनलॉक करें।', emailLogin: 'ईमेल से जारी रखें', phoneLogin: 'मोबाइल नंबर से जारी रखें',
     googleLogin: 'गूगल से लॉगिन करें', or: 'या', emailLabel: 'अपना ईमेल दर्ज करें', phoneLabel: 'अपना 10 अंकों का मोबाइल नंबर डालें',
-    passLabel: 'पासवर्ड', submit: 'सबमिट करें', createAcc: 'नया अकाउंट बनाएं'
+    passLabel: 'पासवर्ड', submit: 'सबमिट करें', createAcc: 'नया अकाउंट बनाएं', shareText: 'द ऑक्स न्यूज़ ऐप डाउनलोड करें: दुनिया की ताज़ा खबरें सीधे आपके फोन पर! अभी इंस्टॉल करें।'
   },
   en: {
     appName: 'THE OX NEWS', liveLabel: 'LIVE', tickerText: 'Latest breaking news from around the world, right on your phone.',
-    home: 'Home', state: 'State', explore: 'Explore', guest: 'Guest User', loginText: 'Login / Register', 
-    logout: 'Logout', close: 'Close', back: 'Back', allCats: 'All Categories', langToggle: 'हिंदी',
-    authTitle: 'One tap. Unlock it all.', emailLogin: 'Continue with Email', phoneLogin: 'Continue with Mobile',
+    home: 'Home', state: 'State', search: 'Search', searchHint: 'Search topics or news...', guest: 'Guest User', 
+    loginText: 'Login / Register', logout: 'Logout', close: 'Close', back: 'Back', allCats: 'All Categories', 
+    langToggle: 'हिंदी', authTitle: 'One tap. Unlock it all.', emailLogin: 'Continue with Email', phoneLogin: 'Continue with Mobile',
     googleLogin: 'Login with Google', or: 'Or', emailLabel: 'Enter your Email', phoneLabel: 'Enter 10-digit Mobile Number',
-    passLabel: 'Password', submit: 'Submit', createAcc: 'Create New Account'
+    passLabel: 'Password', submit: 'Submit', createAcc: 'Create New Account', shareText: 'Download OX News app: Latest news right on your phone! Install now.'
   }
 };
 
@@ -88,12 +88,14 @@ export default function App() {
   const [authType, setAuthType] = useState('main');
   const [webViewModal, setWebViewModal] = useState({ visible: false, url: '', title: '' });
 
+  // Auth States
   const [inputVal, setInputVal] = useState('');
   const [passVal, setPassVal] = useState('');
-  
-  // Real OTP State Variables
   const [confirm, setConfirm] = useState(null);
   const [otpVal, setOtpVal] = useState('');
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     mobileAds().initialize();
@@ -113,7 +115,9 @@ export default function App() {
     setLoading(true);
     let query = '';
     
-    if (activeTab === 'state') {
+    if (activeTab === 'search') {
+      query = searchQuery || (lang === 'hi' ? 'ताज़ा खबर' : 'Latest News');
+    } else if (activeTab === 'state') {
       const stateObj = STATES.find(s => s.id === selectedStateId);
       query = lang === 'hi' ? stateObj.qHi : stateObj.qEn;
     } else {
@@ -124,7 +128,7 @@ export default function App() {
     const data = await getHeadlines(query, lang);
     setArticles(data || []);
     setLoading(false); setRefreshing(false);
-  }, [activeTab, activeCatId, selectedStateId, lang]);
+  }, [activeTab, activeCatId, selectedStateId, lang, searchQuery]);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
@@ -132,6 +136,12 @@ export default function App() {
   
   const resetAuth = () => {
     setConfirm(null); setOtpVal(''); setInputVal(''); setAuthType('main'); setPassVal('');
+  };
+
+  const handleShareApp = async () => {
+    try {
+      await Share.share({ message: t.shareText });
+    } catch (error) { console.log(error); }
   };
 
   const handleGoogleLogin = async () => {
@@ -156,7 +166,6 @@ export default function App() {
     resetAuth();
   };
 
-  // Asli Firebase Phone Auth Logic
   const handlePhoneAuth = async () => {
     if (!inputVal || inputVal.length !== 10) return Alert.alert('Error', 'सही 10 डिजिट का मोबाइल नंबर डालें।');
     try {
@@ -217,12 +226,7 @@ export default function App() {
             </View>
           ) : authType === 'email' ? (
             <View>
-              <TextInput 
-                style={styles.inputField} 
-                placeholder={t.emailLabel}
-                keyboardType="email-address"
-                value={inputVal} onChangeText={setInputVal}
-              />
+              <TextInput style={styles.inputField} placeholder={t.emailLabel} keyboardType="email-address" value={inputVal} onChangeText={setInputVal} />
               <TextInput style={styles.inputField} placeholder={t.passLabel} secureTextEntry value={passVal} onChangeText={setPassVal} />
               <TouchableOpacity style={styles.submitBtn} onPress={handleManualLogin}><Text style={styles.submitBtnText}>{t.submit} / {t.createAcc}</Text></TouchableOpacity>
               <TouchableOpacity style={{marginTop: 15, alignItems: 'center'}} onPress={resetAuth}><Text style={{color: '#64748B', fontWeight: 'bold'}}>{t.back}</Text></TouchableOpacity>
@@ -231,22 +235,12 @@ export default function App() {
             <View>
               {!confirm ? (
                 <>
-                  <TextInput 
-                    style={styles.inputField} 
-                    placeholder={t.phoneLabel}
-                    keyboardType="phone-pad"
-                    value={inputVal} onChangeText={setInputVal} maxLength={10}
-                  />
+                  <TextInput style={styles.inputField} placeholder={t.phoneLabel} keyboardType="phone-pad" value={inputVal} onChangeText={setInputVal} maxLength={10} />
                   <TouchableOpacity style={styles.submitBtn} onPress={handlePhoneAuth}><Text style={styles.submitBtnText}>OTP भेजें</Text></TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <TextInput 
-                    style={styles.inputField} 
-                    placeholder="6-digit OTP डालें"
-                    keyboardType="number-pad"
-                    value={otpVal} onChangeText={setOtpVal} maxLength={6}
-                  />
+                  <TextInput style={styles.inputField} placeholder="6-digit OTP डालें" keyboardType="number-pad" value={otpVal} onChangeText={setOtpVal} maxLength={6} />
                   <TouchableOpacity style={styles.submitBtn} onPress={confirmCode}><Text style={styles.submitBtnText}>OTP Verify करें</Text></TouchableOpacity>
                 </>
               )}
@@ -316,8 +310,8 @@ export default function App() {
           <TouchableOpacity onPress={toggleLanguage} style={styles.langSwitchBtn}>
             <Text style={styles.langSwitchText}>{t.langToggle}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setDrawerOpen(true)} style={{marginLeft: 4}}>
-            <Ionicons name="ellipsis-vertical" size={26} color="#FFF" />
+          <TouchableOpacity onPress={handleShareApp} style={{marginLeft: 4, padding: 4}}>
+            <Ionicons name="share-social" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -328,6 +322,22 @@ export default function App() {
       </View>
 
       <View style={{flex: 1, backgroundColor: '#F8FAFC'}}>
+        
+        {activeTab === 'search' && (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#64748B" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t.searchHint}
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={loadFeed}
+              returnKeyType="search"
+            />
+          </View>
+        )}
+
         {activeTab === 'state' && (
           <View style={styles.stateSelector}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -354,7 +364,7 @@ export default function App() {
                   <>
                     <Image source={{ uri: item.image_url }} style={styles.leadImage} />
                     <View style={styles.leadContent}>
-                      <Text style={styles.tagText}>{activeTab === 'state' ? currentStateName : currentCategoryName}</Text>
+                      <Text style={styles.tagText}>{activeTab === 'state' ? currentStateName : (activeTab === 'search' ? t.search : currentCategoryName)}</Text>
                       <Text style={styles.leadTitle}>{item.title}</Text>
                     </View>
                   </>
@@ -384,9 +394,9 @@ export default function App() {
           <Ionicons name="map" size={24} color={activeTab === 'state' ? '#DC2626' : '#64748B'} />
           <Text style={[styles.bottomTabText, activeTab === 'state' && {color: '#DC2626', fontWeight: 'bold'}]}>{t.state}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomTab} onPress={() => setDrawerOpen(true)}>
-          <Ionicons name="grid" size={24} color="#64748B" />
-          <Text style={styles.bottomTabText}>{t.explore}</Text>
+        <TouchableOpacity style={styles.bottomTab} onPress={() => setActiveTab('search')}>
+          <Ionicons name="search" size={24} color={activeTab === 'search' ? '#DC2626' : '#64748B'} />
+          <Text style={[styles.bottomTabText, activeTab === 'search' && {color: '#DC2626', fontWeight: 'bold'}]}>{t.search}</Text>
         </TouchableOpacity>
       </View>
 
@@ -419,12 +429,18 @@ const styles = StyleSheet.create({
   tickerBar: { backgroundColor: '#1E293B', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
   tickerLabel: { backgroundColor: '#DC2626', color: '#FFF', fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, marginRight: 10 },
   tickerText: { color: '#F8FAFC', fontSize: 13, flex: 1 },
+  
+  // Search UI Styles
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 12, marginTop: 12, marginBottom: 4, paddingHorizontal: 16, borderRadius: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' },
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, height: 48, fontSize: 15, color: '#0F172A', fontWeight: '500' },
+  
   stateSelector: { backgroundColor: '#FFF', paddingVertical: 12, paddingHorizontal: 8, elevation: 3, marginBottom: 6 },
   stateBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 24, backgroundColor: '#F1F5F9', marginHorizontal: 6, borderWidth: 1, borderColor: '#E2E8F0' },
   stateBtnActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
   stateBtnText: { color: '#475569', fontWeight: '700', fontSize: 14 },
   stateBtnTextActive: { color: '#FFF', fontWeight: 'bold' },
-  leadCard: { backgroundColor: '#FFF', marginBottom: 10, elevation: 2 },
+  leadCard: { backgroundColor: '#FFF', marginBottom: 10, elevation: 2, marginTop: 8 },
   leadImage: { width: '100%', height: 240 },
   leadContent: { padding: 18 },
   tagText: { color: '#DC2626', fontSize: 13, fontWeight: '900', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
