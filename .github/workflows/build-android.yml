@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -102,3 +105,9 @@ jobs:
           name: OXNews-PlayStore-AAB
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 14
+
+      - name: Upload Direct APK
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" android/app/build/outputs/apk/release/app-release.apk --title "OX News App - Latest" --notes "Download the APK file directly from below (No ZIP extraction needed)."
