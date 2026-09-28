@@ -110,4 +110,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v1.0.${{ github.run_number }}" android/app/build/outputs/apk/release/app-release.apk --title "OX News App - Latest" --notes "Download the APK file directly from below (No ZIP extraction needed)."
+          gh release create "v1.0.${{ github.run_number }}" android/app/build/outputs/apk/release/*.apk --title "OX News App - Latest" --notes "Download the APK file directly from below (No ZIP extraction needed)."
