@@ -6,7 +6,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import mobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width, height } = Dimensions.get('window');
@@ -53,7 +52,6 @@ const STATES = [
   { id: 'maharashtra', hi: 'महाराष्ट्र', en: 'Maharashtra', qHi: 'महाराष्ट्र न्यूज़', qEn: 'Maharashtra News' }
 ];
 
-// Shimmer Loading Animation Component
 const ShimmerCard = () => {
   const opacity = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -76,11 +74,9 @@ const ShimmerCard = () => {
 export default function App() {
   const [lang, setLang] = useState('hi');
   const t = STRINGS[lang];
-  
-  const [activeTab, setActiveTab] = useState('home'); // home, state, search, shorts
+  const [activeTab, setActiveTab] = useState('home');
   const [activeCatId, setActiveCatId] = useState('breaking');
   const [selectedStateId, setSelectedStateId] = useState('bihar');
-  
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -143,7 +139,6 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#B91C1C" />
       
-      {/* Glassmorphism Header */}
       {activeTab !== 'shorts' && (
         <View style={styles.header}>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -163,10 +158,7 @@ export default function App() {
         </View>
       )}
 
-      {/* Main Content Area */}
       <View style={styles.mainContainer}>
-        
-        {/* Search Bar */}
         {activeTab === 'search' && (
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={22} color="#94A3B8" style={{marginRight: 10}} />
@@ -175,7 +167,6 @@ export default function App() {
           </View>
         )}
 
-        {/* State Selector */}
         {activeTab === 'state' && (
           <View style={styles.stateSelector}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -188,14 +179,12 @@ export default function App() {
           </View>
         )}
 
-        {/* Content Loading (Shimmer) */}
         {loading ? (
           <ScrollView style={{padding: 12}}>
             <ShimmerCard /><ShimmerCard /><ShimmerCard />
           </ScrollView>
         ) : (
           <>
-            {/* Reels / Shorts View */}
             {activeTab === 'shorts' ? (
               <FlatList
                 data={articles}
@@ -204,7 +193,7 @@ export default function App() {
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => (
                   <ImageBackground source={{ uri: item.image_url }} style={styles.shortsImage} resizeMode="cover">
-                    <LinearGradient colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.9)']} style={styles.shortsGradient}>
+                    <View style={styles.shortsOverlay}>
                       <Text style={styles.shortsTag}>{CATEGORIES[lang].find(c => c.id === activeCatId)?.name || 'News'}</Text>
                       <Text style={styles.shortsTitle} numberOfLines={4}>{item.title}</Text>
                       <Text style={styles.shortsSource}>{item.source}</Text>
@@ -212,12 +201,11 @@ export default function App() {
                         <Text style={styles.readMoreText}>{t.readMore}</Text>
                         <Ionicons name="arrow-forward" size={16} color="#FFF" />
                       </TouchableOpacity>
-                    </LinearGradient>
+                    </View>
                   </ImageBackground>
                 )}
               />
             ) : (
-              /* Standard Cinematic Feed */
               <FlatList
                 data={articles}
                 keyExtractor={item => item.url}
@@ -225,13 +213,13 @@ export default function App() {
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.cinematicCard} onPress={() => setWebViewModal({ visible: true, url: item.url })}>
                     <ImageBackground source={{ uri: item.image_url }} style={styles.cardImage} imageStyle={{borderRadius: 16}}>
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.cardGradient}>
+                      <View style={styles.cardOverlay}>
                         <Text style={styles.cardTitle} numberOfLines={3}>{item.title}</Text>
                         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8}}>
                           <Text style={styles.cardSource}>{item.source}</Text>
                           <Ionicons name="chevron-forward-circle" size={24} color="#DC2626" />
                         </View>
-                      </LinearGradient>
+                      </View>
                     </ImageBackground>
                   </TouchableOpacity>
                 )}
@@ -241,7 +229,6 @@ export default function App() {
         )}
       </View>
 
-      {/* FLOATING BOTTOM BAR */}
       <View style={styles.floatingBarContainer}>
         <View style={styles.floatingBar}>
           <TouchableOpacity style={styles.tabBtn} onPress={() => {setActiveTab('home'); setActiveCatId('breaking');}}>
@@ -259,14 +246,12 @@ export default function App() {
         </View>
       </View>
 
-      {/* AdMob Banner at bottom edge */}
       <View style={{backgroundColor: '#FFF'}}>
         <BannerAd unitId={AD_UNIT} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: true }} />
       </View>
 
       {renderDrawer()}
 
-      {/* In-App Browser Modal */}
       <Modal visible={webViewModal.visible} animationType="slide" onRequestClose={() => setWebViewModal({ visible: false, url: '' })}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }}>
           <View style={styles.readerHeader}>
@@ -291,28 +276,24 @@ const styles = StyleSheet.create({
   langBtnText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
   mainContainer: { flex: 1, backgroundColor: '#F1F5F9' },
   
-  /* Cinematic Card */
   cinematicCard: { marginBottom: 16, borderRadius: 16, elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5 },
   cardImage: { width: '100%', height: 260, justifyContent: 'flex-end' },
-  cardGradient: { borderBottomLeftRadius: 16, borderBottomRightRadius: 16, padding: 18, paddingTop: 40 },
+  cardOverlay: { borderBottomLeftRadius: 16, borderBottomRightRadius: 16, padding: 18, paddingTop: 30, backgroundColor: 'rgba(0,0,0,0.65)' },
   cardTitle: { fontSize: 20, fontWeight: '800', color: '#FFF', lineHeight: 28 },
   cardSource: { fontSize: 13, color: '#CBD5E1', fontWeight: '700', textTransform: 'uppercase' },
 
-  /* Shorts / Reels View */
   shortsImage: { width, height: height - 100 },
-  shortsGradient: { flex: 1, justifyContent: 'flex-end', padding: 24, paddingBottom: 120 },
+  shortsOverlay: { flex: 1, justifyContent: 'flex-end', padding: 24, paddingBottom: 120, backgroundColor: 'rgba(0,0,0,0.5)' },
   shortsTag: { backgroundColor: '#DC2626', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, color: '#FFF', fontWeight: 'bold', marginBottom: 12 },
   shortsTitle: { fontSize: 28, fontWeight: '900', color: '#FFF', lineHeight: 36, marginBottom: 10 },
   shortsSource: { fontSize: 15, color: '#94A3B8', fontWeight: 'bold', marginBottom: 20, textTransform: 'uppercase' },
   readMoreBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
   readMoreText: { color: '#FFF', fontWeight: 'bold', fontSize: 15, marginRight: 8 },
 
-  /* Floating Bottom Bar */
   floatingBarContainer: { position: 'absolute', bottom: 70, left: 0, right: 0, alignItems: 'center' },
   floatingBar: { flexDirection: 'row', backgroundColor: 'rgba(255, 255, 255, 0.95)', width: '85%', height: 65, borderRadius: 35, justifyContent: 'space-around', alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5 },
   tabBtn: { alignItems: 'center', justifyContent: 'center', flex: 1 },
 
-  /* Search & State */
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', margin: 12, paddingHorizontal: 16, borderRadius: 16, elevation: 2 },
   searchInput: { flex: 1, height: 50, fontSize: 16, color: '#0F172A', fontWeight: '600' },
   stateSelector: { paddingVertical: 12, paddingHorizontal: 8 },
@@ -321,7 +302,6 @@ const styles = StyleSheet.create({
   stateBtnText: { color: '#475569', fontWeight: '700', fontSize: 15 },
   stateBtnTextActive: { color: '#FFF' },
 
-  /* Drawer / Menu */
   drawerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row' },
   drawerContent: { width: width * 0.75, backgroundColor: '#FFF', height: '100%' },
   drawerHeaderBox: { backgroundColor: '#DC2626', padding: 24, paddingTop: 40, borderBottomWidth: 1, borderBottomColor: '#B91C1C' },
@@ -335,13 +315,11 @@ const styles = StyleSheet.create({
   drawerCloseBtn: { padding: 20, backgroundColor: '#F8FAFC', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
   drawerCloseText: { fontSize: 16, fontWeight: 'bold', color: '#0F172A' },
 
-  /* Shimmer */
   shimmerCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 2 },
   shimmerImg: { width: '100%', height: 180, backgroundColor: '#E2E8F0', borderRadius: 12, marginBottom: 16 },
   shimmerText1: { width: '80%', height: 20, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 10 },
   shimmerText2: { width: '50%', height: 15, backgroundColor: '#E2E8F0', borderRadius: 4 },
 
-  /* WebView */
   readerHeader: { height: 60, justifyContent: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   readerBackText: { fontSize: 18, fontWeight: 'bold', marginLeft: 8 }
 });
