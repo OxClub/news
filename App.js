@@ -8,6 +8,7 @@ import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import mobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width } = Dimensions.get('window');
@@ -89,6 +90,10 @@ export default function App() {
 
   const [inputVal, setInputVal] = useState('');
   const [passVal, setPassVal] = useState('');
+  
+  // Real OTP State Variables
+  const [confirm, setConfirm] = useState(null);
+  const [otpVal, setOtpVal] = useState('');
 
   useEffect(() => {
     mobileAds().initialize();
@@ -124,6 +129,10 @@ export default function App() {
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
   const toggleLanguage = () => { setLang(prev => prev === 'hi' ? 'en' : 'hi'); };
+  
+  const resetAuth = () => {
+    setConfirm(null); setOtpVal(''); setInputVal(''); setAuthType('main'); setPassVal('');
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -140,26 +149,52 @@ export default function App() {
 
   const handleManualLogin = async () => {
     if (!inputVal) return Alert.alert('Error', 'Please enter valid details.');
-    const mockUser = { name: inputVal.split('@')[0], email: authType === 'email' ? inputVal : `${inputVal}@phone.ox` };
+    const mockUser = { name: inputVal.split('@')[0], email: inputVal };
     await AsyncStorage.setItem('@ox_user', JSON.stringify(mockUser));
     setCurrentUser(mockUser);
     setAuthModalOpen(false);
-    setInputVal(''); setPassVal(''); setAuthType('main');
+    resetAuth();
+  };
+
+  // Asli Firebase Phone Auth Logic
+  const handlePhoneAuth = async () => {
+    if (!inputVal || inputVal.length !== 10) return Alert.alert('Error', 'सही 10 डिजिट का मोबाइल नंबर डालें।');
+    try {
+      const confirmation = await auth().signInWithPhoneNumber('+91' + inputVal);
+      setConfirm(confirmation);
+    } catch (error) {
+      Alert.alert('OTP Error', error.message);
+    }
+  };
+
+  const confirmCode = async () => {
+    if (!otpVal || otpVal.length !== 6) return Alert.alert('Error', 'सही 6-डिजिट का OTP डालें।');
+    try {
+      const res = await confirm.confirm(otpVal);
+      const user = { name: res.user.phoneNumber || 'User', email: res.user.phoneNumber + '@phone.ox' };
+      await AsyncStorage.setItem('@ox_user', JSON.stringify(user));
+      setCurrentUser(user);
+      setAuthModalOpen(false);
+      resetAuth();
+    } catch (error) {
+      Alert.alert('Error', 'गलत OTP! कृपया दोबारा चेक करें।');
+    }
   };
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('@ox_user');
     setCurrentUser(null);
     try { await GoogleSignin.signOut(); } catch(e) {}
+    try { await auth().signOut(); } catch(e) {}
   };
 
   const renderAuthModal = () => (
-    <Modal visible={authModalOpen} transparent animationType="slide" onRequestClose={() => setAuthModalOpen(false)}>
+    <Modal visible={authModalOpen} transparent animationType="slide" onRequestClose={() => {setAuthModalOpen(false); resetAuth();}}>
       <View style={styles.authBackdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.authContainer}>
           <View style={styles.authHeader}>
             <Text style={styles.authTitle}>{authType === 'main' ? t.authTitle : (authType === 'email' ? t.emailLogin : t.phoneLogin)}</Text>
-            <TouchableOpacity onPress={() => {setAuthModalOpen(false); setAuthType('main');}}><Ionicons name="close" size={26} color="#000" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => {setAuthModalOpen(false); resetAuth();}}><Ionicons name="close" size={26} color="#000" /></TouchableOpacity>
           </View>
           
           {authType === 'main' ? (
@@ -180,18 +215,42 @@ export default function App() {
                 <Text style={[styles.socialBtnText, {color: '#FFF'}]}>{t.googleLogin}</Text>
               </TouchableOpacity>
             </View>
-          ) : (
+          ) : authType === 'email' ? (
             <View>
               <TextInput 
                 style={styles.inputField} 
-                placeholder={authType === 'email' ? t.emailLabel : t.phoneLabel}
-                keyboardType={authType === 'email' ? "email-address" : "phone-pad"}
+                placeholder={t.emailLabel}
+                keyboardType="email-address"
                 value={inputVal} onChangeText={setInputVal}
               />
               <TextInput style={styles.inputField} placeholder={t.passLabel} secureTextEntry value={passVal} onChangeText={setPassVal} />
-              
               <TouchableOpacity style={styles.submitBtn} onPress={handleManualLogin}><Text style={styles.submitBtnText}>{t.submit} / {t.createAcc}</Text></TouchableOpacity>
-              <TouchableOpacity style={{marginTop: 15, alignItems: 'center'}} onPress={() => setAuthType('main')}><Text style={{color: '#64748B', fontWeight: 'bold'}}>{t.back}</Text></TouchableOpacity>
+              <TouchableOpacity style={{marginTop: 15, alignItems: 'center'}} onPress={resetAuth}><Text style={{color: '#64748B', fontWeight: 'bold'}}>{t.back}</Text></TouchableOpacity>
+            </View>
+          ) : (
+            <View>
+              {!confirm ? (
+                <>
+                  <TextInput 
+                    style={styles.inputField} 
+                    placeholder={t.phoneLabel}
+                    keyboardType="phone-pad"
+                    value={inputVal} onChangeText={setInputVal} maxLength={10}
+                  />
+                  <TouchableOpacity style={styles.submitBtn} onPress={handlePhoneAuth}><Text style={styles.submitBtnText}>OTP भेजें</Text></TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TextInput 
+                    style={styles.inputField} 
+                    placeholder="6-digit OTP डालें"
+                    keyboardType="number-pad"
+                    value={otpVal} onChangeText={setOtpVal} maxLength={6}
+                  />
+                  <TouchableOpacity style={styles.submitBtn} onPress={confirmCode}><Text style={styles.submitBtnText}>OTP Verify करें</Text></TouchableOpacity>
+                </>
+              )}
+              <TouchableOpacity style={{marginTop: 15, alignItems: 'center'}} onPress={resetAuth}><Text style={{color: '#64748B', fontWeight: 'bold'}}>{t.back}</Text></TouchableOpacity>
             </View>
           )}
         </KeyboardAvoidingView>
