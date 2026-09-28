@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import mobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getHeadlines } from './src/api/newsApi';
 
 const { width } = Dimensions.get('window');
@@ -34,16 +34,16 @@ const STRINGS = {
 
 const CATEGORIES = {
   hi: [
-    { id: 'breaking', name: 'ब्रेकिंग न्यूज़', query: 'Latest Breaking News India' },
-    { id: 'india', name: 'भारत', query: 'India News' },
-    { id: 'world', name: 'दुनिया संसार', query: 'World News' },
-    { id: 'entertainment', name: 'मनोरंजन', query: 'Bollywood Entertainment' },
-    { id: 'movies', name: 'मूवीज', query: 'New Movies Reviews' },
-    { id: 'webseries', name: 'वेब सीरीज', query: 'Web Series OTT' },
-    { id: 'tech', name: 'तकनीक', query: 'Technology News' },
-    { id: 'cyber', name: 'साइबर सिक्योरिटी', query: 'Cyber Security Hacks' },
-    { id: 'gaming', name: 'गेमिंग', query: 'Video Games Esports' },
-    { id: 'sports', name: 'खेल', query: 'Sports Cricket Football' },
+    { id: 'breaking', name: 'ब्रेकिंग न्यूज़', query: 'ताज़ा खबर' },
+    { id: 'india', name: 'भारत', query: 'भारत समाचार' },
+    { id: 'world', name: 'दुनिया संसार', query: 'अंतरराष्ट्रीय न्यूज़' },
+    { id: 'entertainment', name: 'मनोरंजन', query: 'बॉलीवुड न्यूज़' },
+    { id: 'movies', name: 'मूवीज', query: 'सिनेमा रिव्यू' },
+    { id: 'webseries', name: 'वेब सीरीज', query: 'वेब सीरीज' },
+    { id: 'tech', name: 'तकनीक', query: 'टेक्नोलॉजी न्यूज़' },
+    { id: 'cyber', name: 'साइबर सिक्योरिटी', query: 'साइबर सुरक्षा हैकिंग' },
+    { id: 'gaming', name: 'गेमिंग', query: 'वीडियो गेम' },
+    { id: 'sports', name: 'खेल', query: 'क्रिकेट समाचार' },
   ],
   en: [
     { id: 'breaking', name: 'Breaking News', query: 'Latest Breaking News India' },
@@ -59,7 +59,16 @@ const CATEGORIES = {
   ]
 };
 
-const STATES = ['Delhi', 'Bihar', 'Uttar Pradesh', 'Maharashtra', 'Rajasthan', 'Jharkhand', 'Madhya Pradesh', 'Gujarat', 'West Bengal'];
+const STATES = [
+  { id: 'delhi', hi: 'दिल्ली', en: 'Delhi', qHi: 'दिल्ली न्यूज़', qEn: 'Delhi News' },
+  { id: 'bihar', hi: 'बिहार', en: 'Bihar', qHi: 'बिहार न्यूज़', qEn: 'Bihar News' },
+  { id: 'up', hi: 'उत्तर प्रदेश', en: 'UP', qHi: 'उत्तर प्रदेश न्यूज़', qEn: 'UP News' },
+  { id: 'maharashtra', hi: 'महाराष्ट्र', en: 'Maharashtra', qHi: 'महाराष्ट्र न्यूज़', qEn: 'Maharashtra News' },
+  { id: 'rajasthan', hi: 'राजस्थान', en: 'Rajasthan', qHi: 'राजस्थान न्यूज़', qEn: 'Rajasthan News' },
+  { id: 'jharkhand', hi: 'झारखंड', en: 'Jharkhand', qHi: 'झारखंड न्यूज़', qEn: 'Jharkhand News' },
+  { id: 'mp', hi: 'मध्य प्रदेश', en: 'MP', qHi: 'मध्य प्रदेश न्यूज़', qEn: 'MP News' },
+  { id: 'gujarat', hi: 'गुजरात', en: 'Gujarat', qHi: 'गुजरात न्यूज़', qEn: 'Gujarat News' }
+];
 
 export default function App() {
   const [lang, setLang] = useState('hi');
@@ -67,7 +76,7 @@ export default function App() {
   
   const [activeTab, setActiveTab] = useState('home');
   const [activeCatId, setActiveCatId] = useState('breaking');
-  const [selectedState, setSelectedState] = useState('Bihar');
+  const [selectedStateId, setSelectedStateId] = useState('bihar');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,12 +106,20 @@ export default function App() {
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
-    const currentCategory = CATEGORIES[lang].find(c => c.id === activeCatId);
-    let query = activeTab === 'state' ? selectedState + ' News' : currentCategory.query;
+    let query = '';
+    
+    if (activeTab === 'state') {
+      const stateObj = STATES.find(s => s.id === selectedStateId);
+      query = lang === 'hi' ? stateObj.qHi : stateObj.qEn;
+    } else {
+      const currentCategory = CATEGORIES[lang].find(c => c.id === activeCatId);
+      query = currentCategory.query;
+    }
+    
     const data = await getHeadlines(query, lang);
     setArticles(data || []);
     setLoading(false); setRefreshing(false);
-  }, [activeTab, activeCatId, selectedState, lang]);
+  }, [activeTab, activeCatId, selectedStateId, lang]);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
@@ -223,6 +240,7 @@ export default function App() {
   );
 
   const currentCategoryName = CATEGORIES[lang].find(c => c.id === activeCatId)?.name;
+  const currentStateName = STATES.find(s => s.id === selectedStateId)?.[lang];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -255,8 +273,8 @@ export default function App() {
           <View style={styles.stateSelector}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {STATES.map(state => (
-                <TouchableOpacity key={state} style={[styles.stateBtn, selectedState === state && styles.stateBtnActive]} onPress={() => setSelectedState(state)}>
-                  <Text style={[styles.stateBtnText, selectedState === state && styles.stateBtnTextActive]}>{state}</Text>
+                <TouchableOpacity key={state.id} style={[styles.stateBtn, selectedStateId === state.id && styles.stateBtnActive]} onPress={() => setSelectedStateId(state.id)}>
+                  <Text style={[styles.stateBtnText, selectedStateId === state.id && styles.stateBtnTextActive]}>{lang === 'hi' ? state.hi : state.en}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -277,7 +295,7 @@ export default function App() {
                   <>
                     <Image source={{ uri: item.image_url }} style={styles.leadImage} />
                     <View style={styles.leadContent}>
-                      <Text style={styles.tagText}>{activeTab === 'state' ? selectedState : currentCategoryName}</Text>
+                      <Text style={styles.tagText}>{activeTab === 'state' ? currentStateName : currentCategoryName}</Text>
                       <Text style={styles.leadTitle}>{item.title}</Text>
                     </View>
                   </>
