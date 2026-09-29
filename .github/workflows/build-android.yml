@@ -39,9 +39,14 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          # Force enabling split APKs in build.gradle before building
           sed -i 's/def enableSeparateBuildPerCPUArchitecture = false/def enableSeparateBuildPerCPUArchitecture = true/g' app/build.gradle
           ./gradlew assembleRelease --no-daemon
+
+      - name: Get Latest Build Tools Version
+        id: build_tools
+        run: |
+          LATEST_BT=$(ls /usr/local/lib/android/sdk/build-tools/ | sort -V | tail -n 1)
+          echo "BT_VERSION=$LATEST_BT" >> $GITHUB_ENV
 
       - name: Sign APKs
         id: sign_apks
@@ -52,6 +57,8 @@ jobs:
           alias: ${{ secrets.ANDROID_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: ${{ env.BT_VERSION }}
 
       - name: Upload Signed APKs to GitHub Releases
         uses: marvinpinto/action-automatic-releases@latest
