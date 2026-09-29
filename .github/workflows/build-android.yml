@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+# GitHub Actions को टैग और रिलीज़ बनाने की परमिशन देना
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Build Signed Release APK
