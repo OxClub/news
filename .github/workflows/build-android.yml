@@ -1,113 +1,63 @@
-name: Build Android APK and AAB
+name: Signed release APK
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build:
+  release:
+    name: Build Signed Release APK
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
+          
+      - name: Install NPM dependencies
+        run: npm ci || npm install
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Project Dependencies
-        run: |
-          npm install --legacy-peer-deps
-          npm install sharp-cli -g
-
-      - name: Rasterize High-Res PNG Icons from SVG & Place in Android Mipmap
-        run: |
-          sharp -i assets/icon.svg -o assets/icon.png resize 512 512
-          sharp -i assets/icon.svg -o assets/adaptive-icon.png resize 512 512
-          sharp -i assets/icon.svg -o assets/splash-icon.png resize 512 512
-
-          # Generate standard Android mipmap sizes so launcher picks it up natively
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher.png resize 48 48
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png resize 72 72
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png resize 96 96
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png resize 144 144
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png resize 192 192
-
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png resize 48 48
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png resize 72 72
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png resize 96 96
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png resize 144 144
-          sharp -i assets/icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png resize 192 192
-
-      - name: Prebuild Native Android Directory
-        run: npx expo prebuild --platform android --clean
-
-      - name: Setup Keystore from Secret
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-
-      - name: Inject Release Signing Configuration
-        run: |
-          cat << 'GRADLE_CONF' >> android/app/build.gradle
-
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file('release.keystore')
-                      storePassword "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-                      keyAlias "${{ secrets.ANDROID_KEY_ALIAS }}"
-                      keyPassword "${{ secrets.ANDROID_KEY_PASSWORD }}"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }
-          GRADLE_CONF
-
-      - name: Grant Executable Permissions to Gradle
-        run: chmod +x android/gradlew
-
-      - name: Build Standalone Release APK
+      - name: Build Android Release (Split APKs)
         run: |
           cd android
-          ./gradlew clean assembleRelease --no-daemon
+          chmod +x ./gradlew
+          # Force enabling split APKs in build.gradle before building
+          sed -i 's/def enableSeparateBuildPerCPUArchitecture = false/def enableSeparateBuildPerCPUArchitecture = true/g' app/build.gradle
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Build Play Store Production AAB
-        run: |
-          cd android
-          ./gradlew bundleRelease --no-daemon
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+      - name: Sign APKs
+        id: sign_apks
+        uses: r0adkll/sign-android-release@v1
         with:
-          name: OXNews-Release-APK
-          path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 14
-
-      - name: Upload Google Play AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: OXNews-PlayStore-AAB
-          path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 14
-
-      - name: Upload Direct APK
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v1.0.${{ github.run_number }}" android/app/build/outputs/apk/release/*.apk --title "OX News App - Latest" --notes "Download the APK file directly from below (No ZIP extraction needed)."
+          BUILD_TOOLS_VERSION: "33.0.0"
+
+      - name: Upload Signed APKs to GitHub Releases
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_releaseTag: "Latest"
+          prerelease: false
+          title: "OX News App - Latest Build"
+          files: |
+            android/app/build/outputs/apk/release/*.apk
