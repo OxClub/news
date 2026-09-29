@@ -40,7 +40,6 @@ jobs:
 
       - name: Ensure Correct App Icon and Assets
         run: |
-          # यह स्टेप सुनिश्चित करेगा कि आपका ऑरिजिनल आइकॉन एंड्रॉइड बिल्ड में सही जगह कॉपी हो जाए
           if [ -f "assets/icon.png" ]; then
             cp assets/icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
             cp assets/icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png || true
@@ -70,12 +69,9 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: ${{ env.BT_VERSION }}
 
-      - name: Upload Signed APKs to GitHub Releases
-        uses: marvinpinto/action-automatic-releases@latest
+      - name: Upload APK to GitHub Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: "Latest"
-          prerelease: false
-          title: "OX News App - Latest Build"
-          files: |
-            android/app/build/outputs/apk/release/*.apk
+          name: ox-news-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
