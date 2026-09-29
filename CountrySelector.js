@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 
 const ALL_COUNTRIES = [
   { name: 'Afghanistan', code: 'af' },
@@ -231,19 +231,19 @@ export default function CountrySelector({ onSelectCountry }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#FFF8F5', paddingTop: 40 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, color: '#B71C1C', textAlign: 'center' },
+  container: { flex: 1, padding: 16, backgroundColor: '#FFF8F5' },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#B71C1C', textAlign: 'center' },
   searchInput: {
-    height: 45,
+    height: 40,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 6,
+    paddingHorizontal: 10,
     backgroundColor: '#fff',
-    marginBottom: 12,
-    fontSize: 16,
+    marginBottom: 10,
+    fontSize: 15,
     color: '#333'
   },
-  item: { padding: 14, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#fff', marginBottom: 4, borderRadius: 6 },
-  text: { fontSize: 16, color: '#333', fontWeight: '500' }
+  item: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#fff', borderRadius: 4, marginBottom: 4 },
+  text: { fontSize: 16, color: '#333' }
 });
