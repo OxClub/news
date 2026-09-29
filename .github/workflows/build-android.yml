@@ -38,6 +38,14 @@ jobs:
       - name: Generate Android folder (Expo Prebuild)
         run: npx expo prebuild --platform android
 
+      - name: Ensure Correct App Icon and Assets
+        run: |
+          # यह स्टेप सुनिश्चित करेगा कि आपका ऑरिजिनल आइकॉन एंड्रॉइड बिल्ड में सही जगह कॉपी हो जाए
+          if [ -f "assets/icon.png" ]; then
+            cp assets/icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
+            cp assets/icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png || true
+          fi
+
       - name: Build Android Release
         run: |
           cd android
