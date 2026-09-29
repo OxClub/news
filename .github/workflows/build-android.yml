@@ -52,8 +52,6 @@ jobs:
           alias: ${{ secrets.ANDROID_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "33.0.0"
 
       - name: Upload Signed APKs to GitHub Releases
         uses: marvinpinto/action-automatic-releases@latest
