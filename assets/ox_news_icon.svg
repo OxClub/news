@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626" />
+      <stop offset="100%" stop-color="#7F1D1D" />
+    </linearGradient>
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="15" stdDeviation="15" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)" rx="150" />
+  
+  <!-- Decorative Globe Rings -->
+  <circle cx="512" cy="450" r="350" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="15" fill="none"/>
+  <circle cx="512" cy="450" r="200" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="15" fill="none"/>
+  
+  <!-- OX Text -->
+  <text x="512" y="550" font-family="Arial, Helvetica, sans-serif" font-size="400" font-weight="900" fill="#FFFFFF" text-anchor="middle" filter="url(#drop-shadow)">OX</text>
+  
+  <!-- News Badge -->
+  <rect x="212" y="680" width="600" height="140" rx="30" fill="#0F172A" filter="url(#drop-shadow)" />
+  <text x="512" y="780" font-family="Arial, Helvetica, sans-serif" font-size="80" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="25">NEWS</text>
+</svg>

@@ -38,18 +38,7 @@ jobs:
       - name: Generate Android folder (Expo Prebuild)
         run: npx expo prebuild --platform android
 
-      - name: Force Enable Split APKs in Gradle
-        run: |
-          BUILD_GRADLE="android/app/build.gradle"
-          if [ -f "$BUILD_GRADLE" ]; then
-            sed -i 's/def enableSeparateBuildPerCPUArchitecture = false/def enableSeparateBuildPerCPUArchitecture = true/g' "$BUILD_GRADLE"
-            echo "Successfully updated build.gradle for splits!"
-          else
-            echo "build.gradle not found!"
-            exit 1
-          fi
-
-      - name: Build Android Release (Split APKs)
+      - name: Build Android Release
         run: |
           cd android
           chmod +x ./gradlew
