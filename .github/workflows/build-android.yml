@@ -32,6 +32,9 @@ jobs:
       - name: Install NPM dependencies
         run: npm ci || npm install
 
+      - name: Generate Android folder (Expo Prebuild)
+        run: npx expo prebuild --platform android
+
       - name: Build Android Release (Split APKs)
         run: |
           cd android
